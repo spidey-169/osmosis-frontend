@@ -28,8 +28,8 @@
     "lint": "lerna run lint",
     "lint:fix": "lerna run lint:fix",
     "pre-commit": "lerna run pre-commit",
-    "postinstall": "cross-env CERC_BUILD_OUTPUT_DIR=./node_modules",
-    "preinstall": "cross-env CERC_BUILD_OUTPUT_DIR=./node_modules"
+    "postinstall": "CERC_BUILD_OUTPUT_DIR=./node_modules",
+    "preinstall": "CERC_BUILD_OUTPUT_DIR=./node_modules"
 
   },
   "pre-commit": [
