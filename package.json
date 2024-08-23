@@ -14,7 +14,7 @@
     "dev": "lerna run dev --parallel",
     "dev:frontier": "cross-env NEXT_PUBLIC_IS_FRONTIER=true lerna run dev --parallel",
     "dev:testnet": "cross-env NEXT_PUBLIC_IS_TESTNET=true lerna run dev --parallel",
-    "start": "cross-env CERC_BUILD_OUTPUT_DIR=. lerna run start --stream",
+    "start": "cross-env PORT=80 lerna run start --stream",
     "start:frontier": "cross-env NEXT_PUBLIC_IS_FRONTIER=true lerna run start --stream",
     "start:testnet": "cross-env NEXT_PUBLIC_IS_TESTNET=true lerna run start --stream",
     "clean": "lerna run clean; rm -rf node_modules",

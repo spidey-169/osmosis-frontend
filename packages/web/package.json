@@ -7,7 +7,7 @@
     "clean": "rm -rf node_modules; rm -rf .next",
     "build": "next build",
     "analyze": "cross-env ANALYZE=true next build",
-    "start": "next start",
+    "start": "PORT=80 start",
     "lint": "prettier --check \"**/*\" && next lint",
     "lint:fix": "prettier --write \"**/*\" && next lint --fix",
     "pre-commit": "lint-staged"
