@@ -18,7 +18,7 @@
     "start:frontier": "cross-env NEXT_PUBLIC_IS_FRONTIER=true lerna run start --stream",
     "start:testnet": "cross-env NEXT_PUBLIC_IS_TESTNET=true lerna run start --stream",
     "clean": "lerna run clean; rm -rf node_modules",
-    "build": "cross-env CERC_BUILD_OUTPUT_DIR=./build-output lerna run build --loglevel verbose",
+    "build": "cross-env CERC_BUILD_OUTPUT_DIR=./build lerna run build --loglevel verbose",
     "build:frontier": "cross-env NEXT_PUBLIC_IS_FRONTIER=true lerna run build",
     "build:testnet": "cross-env NEXT_PUBLIC_IS_TESTNET=true lerna run build",
     "build:libs": "lerna run build --ignore @osmosis-labs/web",
