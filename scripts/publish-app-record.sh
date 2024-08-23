@@ -95,6 +95,7 @@ record:
   config:
     env:
       CERC_WEBAPP_DEBUG: "$rcd_app_version"
+      CERC_BUILD_OUTPUT_DIR: "./build"
   meta:
     note: "Added by CI @ `date`"
     repository: "`git remote get-url origin`"
