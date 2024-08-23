@@ -1,5 +1,7 @@
 #!/bin/bash
 
+rm /app/build-webapp.sh
+
 # Setze das Build-Output-Verzeichnis
 OUTPUT_DIR="build"
 
