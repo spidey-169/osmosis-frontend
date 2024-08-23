@@ -16,6 +16,6 @@ mkdir -p $OUTPUT_DIR/packages
 
 # Verschiebe Inhalte aus den verschiedenen Verzeichnissen
 mv packages/* $OUTPUT_DIR/packages/
-
-
+mv lerna.json $OUTPUT_DIR/
+mv package.json $OUTPUT_DIR/
 echo "Build abgeschlossen. Artefakte befinden sich in $OUTPUT_DIR."
