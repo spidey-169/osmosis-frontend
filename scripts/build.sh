@@ -20,5 +20,11 @@ mkdir -p $OUTPUT_DIR/packages
 #mv lerna.json $OUTPUT_DIR/
 #mv package.json $OUTPUT_DIR/
 
-mv * $OUTPUT_DIR/
+
+for item in *; do
+    if [ "$item" != "build" ]; then
+        mv "$item" build/
+    fi
+done
+
 echo "Build abgeschlossen. Artefakte befinden sich in $OUTPUT_DIR."
