@@ -14,11 +14,11 @@
     "dev": "lerna run dev --parallel",
     "dev:frontier": "cross-env NEXT_PUBLIC_IS_FRONTIER=true lerna run dev --parallel",
     "dev:testnet": "cross-env NEXT_PUBLIC_IS_TESTNET=true lerna run dev --parallel",
-    "start": "lerna run start --stream",
+    "start": "cross-env CERC_BUILD_OUTPUT_DIR=./node_modules lerna run start --stream",
     "start:frontier": "cross-env NEXT_PUBLIC_IS_FRONTIER=true lerna run start --stream",
     "start:testnet": "cross-env NEXT_PUBLIC_IS_TESTNET=true lerna run start --stream",
     "clean": "lerna run clean; rm -rf node_modules",
-    "build": "cross-env CERC_BUILD_OUTPUT_DIR=./build lerna run build",
+    "build": "cross-env CERC_BUILD_OUTPUT_DIR=./node_modules lerna run build",
     "build:frontier": "cross-env NEXT_PUBLIC_IS_FRONTIER=true lerna run build",
     "build:testnet": "cross-env NEXT_PUBLIC_IS_TESTNET=true lerna run build",
     "build:libs": "lerna run build --ignore @osmosis-labs/web",
@@ -27,7 +27,10 @@
     "build:clean": "yarn clean && yarn install --frozen-lockfile && lerna run build",
     "lint": "lerna run lint",
     "lint:fix": "lerna run lint:fix",
-    "pre-commit": "lerna run pre-commit"
+    "pre-commit": "lerna run pre-commit",
+    "postinstall": "cross-env CERC_BUILD_OUTPUT_DIR=./node_modules",
+    "preinstall": "cross-env CERC_BUILD_OUTPUT_DIR=./node_modules"
+
   },
   "pre-commit": [
     "pre-commit"
