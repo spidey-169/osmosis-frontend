@@ -1,5 +1,5 @@
 {
-  "name": "@blackblocks/osmosis-frontend-5",
+  "name": "@blackblocks/osmosis-frontend-7",
   "version": "0.0.1",
   "description": "",
   "repository": "https://github.com/BlackBlocks-io/osmosis-frontend",
@@ -14,7 +14,7 @@
     "dev": "lerna run dev --parallel",
     "dev:frontier": "cross-env NEXT_PUBLIC_IS_FRONTIER=true lerna run dev --parallel",
     "dev:testnet": "cross-env NEXT_PUBLIC_IS_TESTNET=true lerna run dev --parallel",
-    "start": "cross-env PORT=80 lerna run start --stream",
+    "start": "lerna run start --stream",
     "start:frontier": "cross-env NEXT_PUBLIC_IS_FRONTIER=true lerna run start --stream",
     "start:testnet": "cross-env NEXT_PUBLIC_IS_TESTNET=true lerna run start --stream",
     "clean": "lerna run clean; rm -rf node_modules",
