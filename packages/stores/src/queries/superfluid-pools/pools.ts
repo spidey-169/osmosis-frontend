@@ -1,8 +1,7 @@
-import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter, ObservableChainQuery } from "@osmosis-labs/keplr-stores";
 import { computed, makeObservable } from "mobx";
+import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter, ObservableChainQuery } from "@keplr-wallet/stores";
 import { computedFn } from "mobx-utils";
-
 import { SuperfluidAllAssets } from "./types";
 
 export class ObservableQuerySuperfluidPools extends ObservableChainQuery<SuperfluidAllAssets> {
@@ -23,18 +22,9 @@ export class ObservableQuerySuperfluidPools extends ObservableChainQuery<Superfl
     }
 
     for (const asset of this.response.data.assets) {
-      // superfluid share pool
       if (
         asset.asset_type === "SuperfluidAssetTypeLPShare" &&
         asset.denom === `gamm/pool/${poolId}`
-      ) {
-        return true;
-      }
-
-      // superfluid CL pool
-      if (
-        asset.asset_type === "SuperfluidAssetTypeConcentratedShare" &&
-        asset.denom === `cl/pool/${poolId}`
       ) {
         return true;
       }

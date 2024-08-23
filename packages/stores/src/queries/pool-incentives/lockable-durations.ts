@@ -1,10 +1,9 @@
+import { ChainGetter, ObservableChainQuery } from "@keplr-wallet/stores";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter, ObservableChainQuery } from "@osmosis-labs/keplr-stores";
+import { LockableDurations } from "./types";
+import { computed, makeObservable } from "mobx";
 import dayjs from "dayjs";
 import { Duration } from "dayjs/plugin/duration";
-import { computed, makeObservable } from "mobx";
-
-import { LockableDurations } from "./types";
 
 export class ObservableQueryLockableDurations extends ObservableChainQuery<LockableDurations> {
   constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {

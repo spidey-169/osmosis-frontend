@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
-
-import { DataProcessor } from "~/hooks/data/types";
+import { useState } from "react";
+import { DataProcessor } from "./types";
 
 /**
  * General hook that can take data and let a user process it via text input state.
@@ -17,10 +16,10 @@ export function useUserProcessedData<TData>(
   initialState: string = ""
 ): [string, (terms: string) => void, TData[]] {
   const [userInput, setUserInput] = useState(initialState);
-  const processedData = useMemo(
-    () => (userInput === "" ? data : processor.process(userInput)),
-    [userInput, data, processor]
-  );
 
-  return [userInput, setUserInput, processedData];
+  return [
+    userInput,
+    setUserInput,
+    userInput === "" ? data : processor.process(userInput),
+  ];
 }

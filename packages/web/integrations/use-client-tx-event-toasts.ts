@@ -1,26 +1,30 @@
-import { useCallback, useEffect, useMemo } from "react";
-
-import { displayToast as _displayToast, ToastType } from "~/components/alert";
-import { GeneralTxEvent, ObservableWallet } from "~/integrations/wallets";
+import { useEffect, useCallback, useMemo } from "react";
+import {
+  displayToast as do_displayToast,
+  ToastType,
+} from "../components/alert";
+import { Wallet, GeneralTxEvent } from "./wallets";
 
 /** Displays toasts messages for a non-inter chain client. Presents block explorer urls.
  *  @param client Memoized ref to client.
  */
 export function useTxEventToasts(
-  client?: Pick<ObservableWallet, "txStatusEventEmitter" | "makeExplorerUrl">
+  client?: Pick<Wallet, "txStatusEventEmitter" | "makeExplorerUrl">
 ) {
   const displayToast = useCallback(
     (status: GeneralTxEvent, txHash?: string) =>
-      _displayToast(
+      do_displayToast(
         {
-          titleTranslationKey:
+          message:
             status === "pending"
-              ? "transactionBroadcasting"
+              ? "Transaction Broadcasting"
               : status === "confirmed"
-              ? "transactionSuccessful"
-              : "transactionFailed",
-          captionTranslationKey:
-            status === "pending" ? "waitingForTransaction" : undefined,
+              ? "Transaction Successful"
+              : "Transaction Failed",
+          caption:
+            status === "pending"
+              ? "Waiting for transaction to be included in the block"
+              : undefined,
           learnMoreUrl:
             (status === "confirmed" || status === "failed") && txHash
               ? client?.makeExplorerUrl?.(txHash)
@@ -32,7 +36,6 @@ export function useTxEventToasts(
           ? ToastType.SUCCESS
           : ToastType.ERROR
       ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [client?.makeExplorerUrl]
   );
 
@@ -67,6 +70,5 @@ export function useTxEventToasts(
       );
       client?.txStatusEventEmitter?.removeListener("failed", handleFailed);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client]);
 }

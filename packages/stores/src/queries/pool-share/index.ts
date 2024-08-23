@@ -1,3 +1,4 @@
+import { ObservableQueryBalances } from "@keplr-wallet/stores";
 import { AppCurrency, Currency, FiatCurrency } from "@keplr-wallet/types";
 import {
   CoinPretty,
@@ -7,19 +8,16 @@ import {
   PricePretty,
   RatePretty,
 } from "@keplr-wallet/unit";
-import { ObservableQueryBalances } from "@osmosis-labs/keplr-stores";
 import { Duration } from "dayjs/plugin/duration";
 import { computedFn } from "mobx-utils";
-
-import { ObservableQueryPoolGetter } from "../../queries-external/pools";
-import { ObservableQueryAccountsPositions } from "../concentrated-liquidity";
 import {
   ObservableQueryAccountLocked,
   ObservableQueryAccountLockedCoins,
   ObservableQueryAccountUnlockingCoins,
 } from "../lockup";
+import { ObservableQueryPools } from "../pools";
 
-export class ObservableQueryPoolShare {
+export class ObservableQueryGammPoolShare {
   static getShareCurrency(poolId: string): Currency {
     return {
       coinDenom: `GAMM/${poolId}`,
@@ -29,12 +27,11 @@ export class ObservableQueryPoolShare {
   }
 
   constructor(
-    protected readonly queryPools: ObservableQueryPoolGetter,
+    protected readonly queryPools: ObservableQueryPools,
     protected readonly queryBalances: ObservableQueryBalances,
     protected readonly queryAccountLocked: ObservableQueryAccountLocked,
     protected readonly queryLockedCoins: ObservableQueryAccountLockedCoins,
-    protected readonly queryUnlockingCoins: ObservableQueryAccountUnlockingCoins,
-    protected readonly queryAccountsPositions: ObservableQueryAccountsPositions
+    protected readonly queryUnlockingCoins: ObservableQueryAccountUnlockingCoins
   ) {}
 
   /** Returns the pool id arrangement of all shares owned by user.  */
@@ -44,42 +41,33 @@ export class ObservableQueryPoolShare {
     }[] =
       this.queryBalances.getQueryBech32Address(bech32Address).positiveBalances;
     const locked = this.queryLockedCoins.get(bech32Address).lockedCoins;
-    let userPoolIds: string[] = [];
+    let result: string[] = [];
 
     for (const bal of balances.concat(locked)) {
       // The pool share token is in the form of 'gamm/pool/${poolId}'.
       if (bal.currency.coinMinimalDenom.startsWith("gamm/pool/")) {
-        userPoolIds.push(
-          bal.currency.coinMinimalDenom.replace("gamm/pool/", "")
-        );
+        result.push(bal.currency.coinMinimalDenom.replace("gamm/pool/", ""));
       }
     }
 
-    userPoolIds.push(
-      ...this.queryAccountsPositions
-        .get(bech32Address)
-        .positions.map(({ poolId }) => poolId)
-        .filter((poolId): poolId is string => Boolean(poolId))
-    );
-
     // Remove the duplicates.
-    userPoolIds = [...new Set(userPoolIds)];
+    result = [...new Set(result)];
 
-    userPoolIds.sort((e1, e2) => {
+    result.sort((e1, e2) => {
       return parseInt(e1) >= parseInt(e2) ? 1 : -1;
     });
 
-    return userPoolIds;
+    return result;
   });
 
-  readonly makeShareCurrency = computedFn((poolId: string): Currency => {
-    return ObservableQueryPoolShare.getShareCurrency(poolId);
+  readonly getShareCurrency = computedFn((poolId: string): Currency => {
+    return ObservableQueryGammPoolShare.getShareCurrency(poolId);
   });
 
   /** Gets coin balance of user's locked gamm shares in pool. */
   readonly getLockedGammShare = computedFn(
     (bech32Address: string, poolId: string): CoinPretty => {
-      const currency = this.makeShareCurrency(poolId);
+      const currency = this.getShareCurrency(poolId);
 
       const locked = this.queryLockedCoins
         .get(bech32Address)
@@ -144,7 +132,7 @@ export class ObservableQueryPoolShare {
   /** Gets coin balance of user's shares currently unlocking in pool. */
   readonly getUnlockingGammShare = computedFn(
     (bech32Address: string, poolId: string): CoinPretty => {
-      const currency = this.makeShareCurrency(poolId);
+      const currency = this.getShareCurrency(poolId);
 
       const locked = this.queryUnlockingCoins
         .get(bech32Address)
@@ -161,7 +149,7 @@ export class ObservableQueryPoolShare {
   /** Gets coin balance of user's unlocked gamm shares in a pool.  */
   readonly getAvailableGammShare = computedFn(
     (bech32Address: string, poolId: string): CoinPretty => {
-      const currency = this.makeShareCurrency(poolId);
+      const currency = this.getShareCurrency(poolId);
 
       return this.queryBalances
         .getQueryBech32Address(bech32Address)
@@ -227,7 +215,7 @@ export class ObservableQueryPoolShare {
       amount: CoinPretty;
       lockIds: string[];
     }[] => {
-      const poolShareCurrency = this.makeShareCurrency(poolId);
+      const poolShareCurrency = this.getShareCurrency(poolId);
       return lockableDurations.map((duration) => {
         const lockedCoin = this.queryAccountLocked
           .get(bech32Address)
@@ -244,11 +232,11 @@ export class ObservableQueryPoolShare {
 
   fetch(bech32Address: string) {
     return Promise.all([
-      this.queryPools.waitFreshResponse(),
+      this.queryPools.fetch(),
       this.queryBalances.getQueryBech32Address(bech32Address).fetch(),
-      this.queryAccountLocked.get(bech32Address).waitFreshResponse(),
-      this.queryLockedCoins.get(bech32Address).waitFreshResponse(),
-      this.queryUnlockingCoins.get(bech32Address).waitFreshResponse(),
+      this.queryAccountLocked.get(bech32Address).fetch(),
+      this.queryLockedCoins.get(bech32Address).fetch(),
+      this.queryUnlockingCoins.get(bech32Address).fetch(),
     ]);
   }
 }

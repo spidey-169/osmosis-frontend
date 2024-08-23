@@ -1,25 +1,15 @@
-import type { StdFee } from "@cosmjs/amino";
-import { Currency } from "@keplr-wallet/types";
-import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
+import { action, computed, makeObservable, observable } from "mobx";
+import { computedFn } from "mobx-utils";
 import {
   DefaultGasPriceStep,
   FeeType,
   IFeeConfig,
-} from "@osmosis-labs/keplr-hooks";
-import { ChainGetter, CoinPrimitive } from "@osmosis-labs/keplr-stores";
-import { action, computed, makeObservable, observable } from "mobx";
-import { computedFn } from "mobx-utils";
-
-/**
- * Currencies that can be used for fees.
- */
-interface FeeCurrency extends Currency {
-  readonly gasPriceStep: {
-    low: number;
-    average: number;
-    high: number;
-  };
-}
+  TxChainSetter,
+} from "@keplr-wallet/hooks";
+import { ChainGetter, CoinPrimitive } from "@keplr-wallet/stores";
+import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
+import { Currency } from "@keplr-wallet/types";
+import { StdFee } from "@cosmjs/launchpad";
 
 /**
  * FakeFeeConfig is used to set the fee with the high gas price step.
@@ -28,34 +18,24 @@ interface FeeCurrency extends Currency {
  * So, setting the exact max amount is not possible.
  * To mitigate this problem, just set the max amount minus high fee setting.
  */
-export class FakeFeeConfig implements IFeeConfig {
+export class FakeFeeConfig extends TxChainSetter implements IFeeConfig {
   @observable
   protected _gas: number;
 
   @observable
   protected _shouldZero: boolean = false;
 
-  @observable
-  chainId: string;
+  constructor(chainGetter: ChainGetter, initialChainId: string, gas: number) {
+    super(chainGetter, initialChainId);
 
-  constructor(
-    readonly chainGetter: ChainGetter,
-    initialChainId: string,
-    gas: number
-  ) {
     this._gas = gas;
-    this.chainId = initialChainId;
+    this._chainId = initialChainId;
 
     makeObservable(this);
   }
 
   get gas(): number {
     return this._gas;
-  }
-
-  @action
-  setChain(chainId: string) {
-    this.chainId = chainId;
   }
 
   @computed
@@ -75,10 +55,6 @@ export class FakeFeeConfig implements IFeeConfig {
   get feeCurrency(): Currency | undefined {
     const chainInfo = this.chainGetter.getChain(this.chainId);
     return chainInfo.feeCurrencies[0];
-  }
-
-  get feeCurrencyWithGas(): FeeCurrency {
-    return this.feeCurrency as FeeCurrency;
   }
 
   feeType: FeeType | undefined;
@@ -109,8 +85,7 @@ export class FakeFeeConfig implements IFeeConfig {
       };
     }
 
-    const gasPriceStep =
-      this.feeCurrencyWithGas.gasPriceStep ?? DefaultGasPriceStep;
+    const gasPriceStep = this.chainInfo.gasPriceStep ?? DefaultGasPriceStep;
     const feeAmount = new Dec(gasPriceStep.high.toString()).mul(
       new Dec(this.gas)
     );
@@ -121,20 +96,18 @@ export class FakeFeeConfig implements IFeeConfig {
     };
   });
 
-  getFeeTypePretty(): CoinPretty {
+  getFeeTypePretty(_feeType: FeeType): CoinPretty {
     // noop
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return new CoinPretty(this.feeCurrency!, new Dec(0));
   }
 
-  setFeeType(): void {
+  setFeeType(_feeType: FeeType | undefined): void {
     // noop
   }
 
   toStdFee(): StdFee {
     return {
       gas: this.gas.toString(),
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       amount: [this.getFeePrimitive()!],
     };
   }

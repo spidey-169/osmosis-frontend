@@ -1,38 +1,36 @@
+import { Pool } from "./interface";
 import { Coin, Dec, Int } from "@keplr-wallet/unit";
-import { StableSwapMath, StableSwapToken } from "@osmosis-labs/math";
-
-import { NotEnoughLiquidityError } from "./errors";
-import { SharePool } from "./interface";
-import { Quote, RoutablePool } from "./router";
-import { PoolCommon, PoolMetricsRaw } from "./types";
+import { StableSwapToken, StableSwapMath } from "@osmosis-labs/math";
 
 /** Raw query response representation of pool. */
-export type StablePoolRaw = PoolCommon &
-  Partial<PoolMetricsRaw> & {
-    "@type": string;
-    id: string;
-    pool_params: {
-      // Dec
-      swap_fee: string;
-      // Dec
-      exit_fee: string;
-    };
-    total_shares: {
-      denom: string;
-      // Int
-      amount: string;
-    };
-    pool_liquidity: {
-      denom: string;
-      // Int
-      amount: string;
-    }[];
-    scaling_factors: string[];
-    scaling_factor_controller: string;
+export interface StablePoolRaw {
+  "@type": string;
+  id: string;
+  pool_params: {
+    lock: boolean;
+    // Dec
+    swap_fee: string;
+    // Dec
+    exit_fee: string;
   };
+  total_shares: {
+    denom: string;
+    // Int
+    amount: string;
+  };
+  pool_liquidity: {
+    denom: string;
+    // Int
+    amount: string;
+  }[];
+  scaling_factors: string[];
+  scaling_factor_controller: string;
+}
 
 /** Implementation of stableswap Pool interface w/ related stableswap calculations & metadata. */
-export class StablePool implements SharePool, RoutablePool {
+export class StablePool implements Pool {
+  constructor(public readonly raw: StablePoolRaw) {}
+
   get type(): "stable" {
     return "stable";
   }
@@ -44,7 +42,7 @@ export class StablePool implements SharePool, RoutablePool {
   get poolAssets(): { denom: string; amount: Int; scalingFactor: number }[] {
     return this.raw.pool_liquidity.map((asset, index) => {
       const scalingFactor = parseInt(this.raw.scaling_factors[index]);
-      if (isNaN(scalingFactor))
+      if (scalingFactor === NaN)
         throw new Error(`Invalid scaling factor in pool id: ${this.raw.id}`);
 
       return {
@@ -72,15 +70,12 @@ export class StablePool implements SharePool, RoutablePool {
   get exitFee(): Dec {
     return new Dec(this.raw.pool_params.exit_fee);
   }
-  get takerFee(): Dec {
-    return new Dec(this.raw.taker_fee);
-  }
 
   protected get stableSwapTokens(): StableSwapToken[] {
     return this.poolAssets.map((asset, index) => {
       const scalingFactor = parseInt(this.raw.scaling_factors[index]);
 
-      if (isNaN(scalingFactor)) throw new Error("Invalid scaling factor");
+      if (scalingFactor === NaN) throw new Error("Invalid scaling factor");
 
       return {
         denom: asset.denom,
@@ -89,8 +84,6 @@ export class StablePool implements SharePool, RoutablePool {
       };
     });
   }
-
-  constructor(public readonly raw: StablePoolRaw) {}
 
   getPoolAsset(denom: string): {
     denom: string;
@@ -108,25 +101,19 @@ export class StablePool implements SharePool, RoutablePool {
   }
 
   hasPoolAsset(denom: string): boolean {
-    return this.poolAssets.some((asset) => asset.denom === denom);
+    const poolAsset = this.poolAssets.find((asset) => asset.denom === denom);
+    return poolAsset !== undefined;
   }
 
   getSpotPriceInOverOut(tokenInDenom: string, tokenOutDenom: string): Dec {
     const inPoolAsset = this.getPoolAsset(tokenInDenom);
     const outPoolAsset = this.getPoolAsset(tokenOutDenom);
 
-    try {
-      return StableSwapMath.calcSpotPrice(
-        this.stableSwapTokens,
-        inPoolAsset.denom,
-        outPoolAsset.denom
-      );
-    } catch (e: any) {
-      // considered not enough liquidity
-      if (e.message === "cannot input more than y reserve")
-        throw new NotEnoughLiquidityError(e.message);
-      else throw e;
-    }
+    return StableSwapMath.calcSpotPrice(
+      this.stableSwapTokens,
+      inPoolAsset.denom,
+      outPoolAsset.denom
+    );
   }
 
   getSpotPriceInOverOutWithoutSwapFee(
@@ -136,18 +123,11 @@ export class StablePool implements SharePool, RoutablePool {
     const inPoolAsset = this.getPoolAsset(tokenInDenom);
     const outPoolAsset = this.getPoolAsset(tokenOutDenom);
 
-    try {
-      return StableSwapMath.calcSpotPrice(
-        this.stableSwapTokens,
-        inPoolAsset.denom,
-        outPoolAsset.denom
-      );
-    } catch (e: any) {
-      // considered not enough liquidity
-      if (e.message === "cannot input more than y reserve")
-        throw new NotEnoughLiquidityError(e.message);
-      else throw e;
-    }
+    return StableSwapMath.calcSpotPrice(
+      this.stableSwapTokens,
+      inPoolAsset.denom,
+      outPoolAsset.denom
+    );
   }
 
   getSpotPriceOutOverIn(tokenInDenom: string, tokenOutDenom: string): Dec {
@@ -165,43 +145,37 @@ export class StablePool implements SharePool, RoutablePool {
     );
   }
 
-  async getTokenInByTokenOut(
+  getTokenInByTokenOut(
     tokenOut: { denom: string; amount: Int },
     tokenInDenom: string,
     swapFee?: Dec
-  ): Promise<Quote> {
+  ): {
+    amount: Int;
+    beforeSpotPriceInOverOut: Dec;
+    beforeSpotPriceOutOverIn: Dec;
+    afterSpotPriceInOverOut: Dec;
+    afterSpotPriceOutOverIn: Dec;
+    effectivePriceInOverOut: Dec;
+    effectivePriceOutOverIn: Dec;
+    priceImpact: Dec;
+  } {
     const inPoolAsset = this.getPoolAsset(tokenInDenom);
     const outPoolAsset = this.getPoolAsset(tokenOut.denom);
 
-    tokenOut.amount = new Dec(tokenOut.amount)
-      .mul(new Dec(1).sub(this.takerFee))
-      .truncate();
-
     const coinOut = new Coin(tokenOut.denom, tokenOut.amount);
 
-    let beforeSpotPriceInOverOut: Dec;
-    let tokenInAmount: Int;
-    try {
-      beforeSpotPriceInOverOut = StableSwapMath.calcSpotPrice(
-        this.stableSwapTokens,
-        inPoolAsset.denom,
-        outPoolAsset.denom
-      );
+    const beforeSpotPriceInOverOut = StableSwapMath.calcSpotPrice(
+      this.stableSwapTokens,
+      inPoolAsset.denom,
+      outPoolAsset.denom
+    );
 
-      tokenInAmount = StableSwapMath.calcInGivenOut(
-        this.stableSwapTokens,
-        coinOut,
-        tokenInDenom,
-        swapFee ?? this.swapFee
-      );
-    } catch (e: any) {
-      // considered not enough liquidity
-      if (e.message === "cannot input more than y reserve")
-        throw new NotEnoughLiquidityError(e.message);
-      else throw e;
-    }
-
-    if (tokenInAmount.lte(new Int(0))) throw new NotEnoughLiquidityError();
+    const tokenInAmount = StableSwapMath.calcInGivenOut(
+      this.stableSwapTokens,
+      coinOut,
+      tokenInDenom,
+      swapFee ?? this.swapFee
+    );
 
     const movedStableTokens: StableSwapToken[] = this.stableSwapTokens.map(
       (token) => {
@@ -217,29 +191,18 @@ export class StablePool implements SharePool, RoutablePool {
         return token;
       }
     );
-
-    let afterSpotPriceInOverOut;
-    try {
-      afterSpotPriceInOverOut = StableSwapMath.calcSpotPrice(
-        movedStableTokens,
-        inPoolAsset.denom,
-        outPoolAsset.denom
-      );
-    } catch (e: any) {
-      // considered not enough liquidity
-      if (e.message === "cannot input more than y reserve")
-        throw new NotEnoughLiquidityError(e.message);
-      else throw e;
-    }
-
-    // Now you can use the `spotPrice` variable later in your code
+    const afterSpotPriceInOverOut = StableSwapMath.calcSpotPrice(
+      movedStableTokens,
+      inPoolAsset.denom,
+      outPoolAsset.denom
+    );
 
     if (afterSpotPriceInOverOut.lt(beforeSpotPriceInOverOut)) {
       throw new Error("Spot price can't be decreased after swap");
     }
 
     const effectivePrice = new Dec(tokenInAmount).quo(new Dec(tokenOut.amount));
-    const priceImpactTokenOut = effectivePrice
+    const priceImpact = effectivePrice
       .quo(beforeSpotPriceInOverOut)
       .sub(new Dec("1"));
 
@@ -253,47 +216,54 @@ export class StablePool implements SharePool, RoutablePool {
       afterSpotPriceOutOverIn: new Dec(1).quoTruncate(afterSpotPriceInOverOut),
       effectivePriceInOverOut: effectivePrice,
       effectivePriceOutOverIn: new Dec(1).quoTruncate(effectivePrice),
-      priceImpactTokenOut,
+      priceImpact,
     };
   }
 
-  async getTokenOutByTokenIn(
+  getTokenOutByTokenIn(
     tokenIn: { denom: string; amount: Int },
     tokenOutDenom: string,
     swapFee?: Dec
-  ): Promise<Quote> {
+  ): {
+    amount: Int;
+    beforeSpotPriceInOverOut: Dec;
+    beforeSpotPriceOutOverIn: Dec;
+    afterSpotPriceInOverOut: Dec;
+    afterSpotPriceOutOverIn: Dec;
+    effectivePriceInOverOut: Dec;
+    effectivePriceOutOverIn: Dec;
+    priceImpact: Dec;
+  } {
     const inPoolAsset = this.getPoolAsset(tokenIn.denom);
     const outPoolAsset = this.getPoolAsset(tokenOutDenom);
 
-    tokenIn.amount = new Dec(tokenIn.amount)
-      .mul(new Dec(1).sub(this.takerFee))
-      .truncate();
-
     const coinIn = new Coin(tokenIn.denom, tokenIn.amount);
 
-    let beforeSpotPriceInOverOut: Dec;
-    let tokenOutAmount: Int;
-    try {
-      beforeSpotPriceInOverOut = StableSwapMath.calcSpotPrice(
-        this.stableSwapTokens,
-        inPoolAsset.denom,
-        outPoolAsset.denom
-      );
+    const beforeSpotPriceInOverOut = StableSwapMath.calcSpotPrice(
+      this.stableSwapTokens,
+      inPoolAsset.denom,
+      outPoolAsset.denom
+    );
 
-      tokenOutAmount = StableSwapMath.calcOutGivenIn(
-        this.stableSwapTokens,
-        coinIn,
-        outPoolAsset.denom,
-        swapFee ?? this.swapFee
-      );
-    } catch (e: any) {
-      // considered not enough liquidity
-      if (e.message === "cannot input more than y reserve")
-        throw new NotEnoughLiquidityError(e.message);
-      else throw e;
+    const tokenOutAmount = StableSwapMath.calcOutGivenIn(
+      this.stableSwapTokens,
+      coinIn,
+      outPoolAsset.denom,
+      swapFee ?? this.swapFee
+    );
+
+    if (tokenOutAmount.equals(new Int(0))) {
+      return {
+        amount: new Int(0),
+        beforeSpotPriceInOverOut: new Dec(0),
+        beforeSpotPriceOutOverIn: new Dec(0),
+        afterSpotPriceInOverOut: new Dec(0),
+        afterSpotPriceOutOverIn: new Dec(0),
+        effectivePriceInOverOut: new Dec(0),
+        effectivePriceOutOverIn: new Dec(0),
+        priceImpact: new Dec(0),
+      };
     }
-
-    if (tokenOutAmount.lte(new Int(0))) throw new NotEnoughLiquidityError();
 
     const movedStableTokens: StableSwapToken[] = this.stableSwapTokens.map(
       (token) => {
@@ -312,26 +282,18 @@ export class StablePool implements SharePool, RoutablePool {
         return token;
       }
     );
-    let afterSpotPriceInOverOut;
-    try {
-      afterSpotPriceInOverOut = StableSwapMath.calcSpotPrice(
-        movedStableTokens,
-        tokenIn.denom,
-        outPoolAsset.denom
-      );
-    } catch (e: any) {
-      // considered not enough liquidity
-      if (e.message === "cannot input more than y reserve")
-        throw new NotEnoughLiquidityError(e.message);
-      else throw e;
-    }
+    const afterSpotPriceInOverOut = StableSwapMath.calcSpotPrice(
+      movedStableTokens,
+      tokenIn.denom,
+      outPoolAsset.denom
+    );
 
     if (afterSpotPriceInOverOut.lt(beforeSpotPriceInOverOut)) {
       throw new Error("Spot price can't be decreased after swap");
     }
 
     const effectivePrice = new Dec(tokenIn.amount).quo(new Dec(tokenOutAmount));
-    const priceImpactTokenOut = effectivePrice
+    const priceImpact = effectivePrice
       .quo(beforeSpotPriceInOverOut)
       .sub(new Dec("1"));
 
@@ -345,8 +307,18 @@ export class StablePool implements SharePool, RoutablePool {
       afterSpotPriceOutOverIn: new Dec(1).quoTruncate(afterSpotPriceInOverOut),
       effectivePriceInOverOut: effectivePrice,
       effectivePriceOutOverIn: new Dec(1).quoTruncate(effectivePrice),
-      priceImpactTokenOut,
+      priceImpact,
     };
+  }
+
+  getNormalizedLiquidity(tokenInDenom: string, tokenOutDenom: string): Dec {
+    const tokenOut = this.getPoolAsset(tokenOutDenom);
+    const tokenIn = this.getPoolAsset(tokenInDenom);
+
+    return tokenOut.amount
+      .toDec()
+      .mul(new Dec(tokenIn.scalingFactor))
+      .quo(new Dec(tokenIn.scalingFactor).add(new Dec(tokenOut.scalingFactor))); // TODO: ensure this works in router
   }
 
   getLimitAmountByTokenIn(denom: string): Int {

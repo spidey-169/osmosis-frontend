@@ -1,37 +1,36 @@
-import { Bech32Address } from "@keplr-wallet/cosmos";
-import { AppCurrency } from "@keplr-wallet/types";
-import { Dec, RatePretty } from "@keplr-wallet/unit";
 import {
-  IFeeConfig,
-  InvalidNumberAmountError,
-} from "@osmosis-labs/keplr-hooks";
-import { AmountConfig } from "@osmosis-labs/keplr-hooks";
-import {
-  ChainGetter,
-  CosmosQueries,
-  IQueriesStore,
-  ObservableQueryBalances,
-} from "@osmosis-labs/keplr-stores";
-import {
-  action,
+  observable,
   computed,
   makeObservable,
-  observable,
+  action,
   runInAction,
 } from "mobx";
-
-import type { ObservableQueryPool } from "../queries-external/pools";
+import {
+  TxChainSetter,
+  IFeeConfig,
+  InvalidNumberAmountError,
+} from "@keplr-wallet/hooks";
+import {
+  ObservableQueryBalances,
+  ChainGetter,
+  IQueriesStore,
+} from "@keplr-wallet/stores";
+import { AmountConfig } from "@keplr-wallet/hooks";
+import { AppCurrency } from "@keplr-wallet/types";
+import { Bech32Address } from "@keplr-wallet/cosmos";
+import { Dec, RatePretty } from "@keplr-wallet/unit";
+import type { ObservableQueryPool } from "../queries";
 import {
   DepositNoBalanceError,
   HighSwapFeeError,
-  InvalidScalingFactorControllerAddress,
   InvalidSwapFeeError,
+  InvalidScalingFactorControllerAddress,
   MaxAssetsCountError,
   MinAssetsCountError,
   NegativePercentageError,
+  ScalingFactorTooLowError,
   NegativeSwapFeeError,
   PercentageSumError,
-  ScalingFactorTooLowError,
 } from "./errors";
 
 export interface CreatePoolConfigOpts {
@@ -39,7 +38,7 @@ export interface CreatePoolConfigOpts {
   maxAssetsCount: number;
 }
 
-export class ObservableCreatePoolConfig {
+export class ObservableCreatePoolConfig extends TxChainSetter {
   @observable
   protected _sender: string;
 
@@ -47,7 +46,7 @@ export class ObservableCreatePoolConfig {
   protected _feeConfig: IFeeConfig | undefined;
 
   @observable.ref
-  protected _queriesStore: IQueriesStore<CosmosQueries>;
+  protected _queriesStore: IQueriesStore;
 
   @observable.ref
   protected _queryBalances: ObservableQueryBalances;
@@ -73,14 +72,11 @@ export class ObservableCreatePoolConfig {
 
   protected _opts: CreatePoolConfigOpts;
 
-  @observable
-  protected chainId: string;
-
   constructor(
-    readonly chainGetter: ChainGetter,
+    chainGetter: ChainGetter,
     initialChainId: string,
     sender: string,
-    queriesStore: IQueriesStore<CosmosQueries>,
+    queriesStore: IQueriesStore,
     queryBalances: ObservableQueryBalances,
     feeConfig?: IFeeConfig,
     opts: CreatePoolConfigOpts = {
@@ -88,7 +84,7 @@ export class ObservableCreatePoolConfig {
       maxAssetsCount: 4,
     }
   ) {
-    this.chainId = initialChainId;
+    super(chainGetter, initialChainId);
 
     this._sender = sender;
     this._queriesStore = queriesStore;
@@ -109,11 +105,6 @@ export class ObservableCreatePoolConfig {
     amountConfig: AmountConfig;
   }[] {
     return this._assets;
-  }
-
-  @action
-  setChain(chainId: string) {
-    this.chainId = chainId;
   }
 
   @computed
@@ -375,7 +366,7 @@ export class ObservableCreatePoolConfig {
 
     const parsedScalingFactor = parseFloat(scalingFactor);
 
-    if (!Number.isNaN(parsedScalingFactor))
+    if (parsedScalingFactor !== NaN)
       this.assets[index] = {
         ...this.assets[index],
         scalingFactor: parsedScalingFactor,

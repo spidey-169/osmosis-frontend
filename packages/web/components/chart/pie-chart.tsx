@@ -1,6 +1,6 @@
-import type { Options } from "highcharts";
 import dynamic from "next/dynamic";
-import React, { FunctionComponent, useEffect, useState } from "react";
+import type { Options } from "highcharts";
+import React, { FunctionComponent, useState, useEffect } from "react";
 
 const HighchartsReact = dynamic(() => import("highcharts-react-official"), {
   ssr: false,
@@ -32,7 +32,13 @@ const defaultOptions: Partial<Options> = {
     margin: 0,
   },
   tooltip: {
-    enabled: false,
+    pointFormatter: function () {
+      return `<p>${
+        this.x
+      }<span style='font-size: 10px;'>${this.name.toUpperCase()}</span> / ${
+        this.y
+      }%</p>`;
+    },
   },
   title: {
     text: undefined,

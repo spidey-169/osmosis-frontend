@@ -1,5 +1,5 @@
-import { CoinUtils, Dec, Int } from "@keplr-wallet/unit";
 import bigInteger from "big-integer";
+import { Int, Dec, CoinUtils } from "@keplr-wallet/unit";
 
 export class BigDec {
   public static readonly precision = 36;
@@ -220,13 +220,6 @@ export class BigDec {
   public mul(d2: BigDec): BigDec {
     return new BigDec(
       this.mulRaw(d2).chopPrecisionAndRound(),
-      BigDec.precision
-    );
-  }
-
-  public mulRoundUp(d2: BigDec): BigDec {
-    return new BigDec(
-      this.mulRaw(d2).chopPrecisionAndRoundUp(),
       BigDec.precision
     );
   }

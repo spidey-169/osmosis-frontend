@@ -1,15 +1,13 @@
-import classNames from "classnames";
 import Image from "next/image";
+import classNames from "classnames";
 import { FunctionComponent } from "react";
-
-import { ButtonProps } from "~/components/buttons/types";
-import { CustomClasses, Disableable } from "~/components/types";
-import { WalletDisplay } from "~/integrations";
+import { ButtonProps } from "../buttons/types";
+import { CustomClasses, Disableable } from "../types";
 
 export const AssetSourceCard: FunctionComponent<
   {
     id: string;
-    iconUrl: WalletDisplay["iconUrl"];
+    iconUrl: string;
     displayName: string;
     isConnected?: boolean;
     isSelected?: boolean;
@@ -28,7 +26,7 @@ export const AssetSourceCard: FunctionComponent<
   <button disabled={disabled} onClick={onClick}>
     <div
       className={classNames({
-        "rounded-2xl bg-wosmongton-200 p-0.5": isConnected,
+        "p-0.5 bg-wosmongton-200 rounded-2xl": isConnected,
       })}
     >
       <div

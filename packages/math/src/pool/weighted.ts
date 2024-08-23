@@ -1,5 +1,4 @@
 import { Dec } from "@keplr-wallet/unit";
-
 import { pow } from "../utils";
 
 export const WeightedPoolMath = {
@@ -25,11 +24,10 @@ export function calcSpotPrice(
   return number.quo(denom).mul(scale);
 }
 
-/** Weighted constant product. */
 export function calcOutGivenIn(
-  tokenReservesIn: Dec,
+  tokenBalanceIn: Dec,
   tokenWeightIn: Dec,
-  tokenReservesOut: Dec,
+  tokenBalanceOut: Dec,
   tokenWeightOut: Dec,
   tokenAmountIn: Dec,
   swapFee: Dec
@@ -37,29 +35,27 @@ export function calcOutGivenIn(
   const weightRatio = tokenWeightIn.quo(tokenWeightOut);
   let adjustedIn = oneDec.sub(swapFee);
   adjustedIn = tokenAmountIn.mul(adjustedIn);
-  const y = tokenReservesIn.quo(tokenReservesIn.add(adjustedIn));
+  const y = tokenBalanceIn.quo(tokenBalanceIn.add(adjustedIn));
   const foo = pow(y, weightRatio);
   const bar = oneDec.sub(foo);
-  return tokenReservesOut.mul(bar);
+  return tokenBalanceOut.mul(bar);
 }
 
-/** Weighted constant product. */
 export function calcInGivenOut(
-  tokenReservesIn: Dec,
+  tokenBalanceIn: Dec,
   tokenWeightIn: Dec,
-  tokenReservesOut: Dec,
+  tokenBalanceOut: Dec,
   tokenWeightOut: Dec,
   tokenAmountOut: Dec,
   swapFee: Dec
 ): Dec {
   const weightRatio = tokenWeightOut.quo(tokenWeightIn);
-  const diff = tokenReservesOut.sub(tokenAmountOut);
-  if (diff.lte(new Dec(0))) return new Dec(0); // not enough liquidity
-  const y = tokenReservesOut.quo(diff);
+  const diff = tokenBalanceOut.sub(tokenAmountOut);
+  const y = tokenBalanceOut.quo(diff);
   let foo = pow(y, weightRatio);
   foo = foo.sub(oneDec);
   const tokenAmountIn = oneDec.sub(swapFee);
-  return tokenReservesIn.mul(foo).quo(tokenAmountIn);
+  return tokenBalanceIn.mul(foo).quo(tokenAmountIn);
 }
 
 export function calcPoolOutGivenSingleIn(

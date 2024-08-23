@@ -1,19 +1,18 @@
-import { KVStore, toGenerator } from "@keplr-wallet/common";
-import { ChainIdHelper } from "@keplr-wallet/cosmos";
-import { ChainGetter } from "@osmosis-labs/keplr-stores";
-import { TxTracer } from "@osmosis-labs/tx";
-import { Buffer } from "buffer";
-import dayjs from "dayjs";
-import { action, computed, flow, makeObservable, observable, toJS } from "mobx";
+import { computed, flow, makeObservable, observable, toJS } from "mobx";
 import { keepAlive } from "mobx-utils";
+import dayjs from "dayjs";
+import { Buffer } from "buffer";
 import { computedFn } from "mobx-utils";
-
-import { PollingStatusSubscription } from "./polling-status-subscription";
+import { KVStore, toGenerator } from "@keplr-wallet/common";
+import { ChainGetter } from "@keplr-wallet/stores";
+import { ChainIdHelper } from "@keplr-wallet/cosmos";
+import { TxTracer } from "../tx/tracer";
 import {
+  UncommitedHistory,
   IBCTransferHistory,
   IBCTransferHistoryStatus,
-  UncommitedHistory,
 } from "./types";
+import { PollingStatusSubscription } from "./polling-status-subscription";
 
 /** Stores IBC sending, pending, and failure transactions state for some time period. */
 export class IBCTransferHistoryStore {
@@ -32,9 +31,9 @@ export class IBCTransferHistoryStore {
   @observable
   protected _histories: IBCTransferHistory[] = [];
 
-  protected onHistoryChangedHandler:
-    | ((history: IBCTransferHistory) => void)
-    | null = null;
+  protected onHistoryChangedHandlers: ((
+    history: IBCTransferHistory
+  ) => void)[] = [];
 
   // Key is chain id.
   // No need to be observable
@@ -54,7 +53,7 @@ export class IBCTransferHistoryStore {
   }
 
   addHistoryChangedHandler(handler: (history: IBCTransferHistory) => void) {
-    this.onHistoryChangedHandler = handler;
+    this.onHistoryChangedHandlers.push(handler);
   }
 
   get histories(): IBCTransferHistory[] {
@@ -186,7 +185,7 @@ export class IBCTransferHistoryStore {
     };
   }
 
-  protected async traceHistoryStatus(
+  async traceHistroyStatus(
     history: Pick<
       IBCTransferHistory,
       | "sourceChainId"
@@ -326,15 +325,6 @@ export class IBCTransferHistoryStore {
     this.tryUpdateHistoryStatus(history.txHash);
   }
 
-  @action
-  removeUncommittedHistory(txHash: string) {
-    this._uncommitedHistories = this._uncommitedHistories.filter(
-      (uncommited) => uncommited.txHash !== txHash
-    );
-
-    this.save();
-  }
-
   @flow
   protected *pushPendingHistoryWithCreatedAt(
     history: Omit<IBCTransferHistory, "status">
@@ -375,64 +365,66 @@ export class IBCTransferHistoryStore {
         | { type: string; attributes: { key: string; value: string }[] }[]
         | undefined;
       if (tx && !tx.code && events) {
-        for (const event of events) {
-          if (event.type === "send_packet") {
-            const attributes = event.attributes;
-            const sourceChannelAttr = attributes.find(
-              (attr) =>
-                attr.key ===
-                Buffer.from("packet_src_channel").toString("base64")
-            );
-            const sourceChannel = sourceChannelAttr
-              ? Buffer.from(sourceChannelAttr.value, "base64").toString()
-              : undefined;
-            const destChannelAttr = attributes.find(
-              (attr) =>
-                attr.key ===
-                Buffer.from("packet_dst_channel").toString("base64")
-            );
-            const destChannel = destChannelAttr
-              ? Buffer.from(destChannelAttr.value, "base64").toString()
-              : undefined;
-            const sequenceAttr = attributes.find(
-              (attr) =>
-                attr.key === Buffer.from("packet_sequence").toString("base64")
-            );
-            const sequence = sequenceAttr
-              ? Buffer.from(sequenceAttr.value, "base64").toString()
-              : undefined;
-            const timeoutHeightAttr = attributes.find(
-              (attr) =>
-                attr.key ===
-                Buffer.from("packet_timeout_height").toString("base64")
-            );
-            const timeoutHeight = timeoutHeightAttr
-              ? Buffer.from(timeoutHeightAttr.value, "base64").toString()
-              : undefined;
-            const timeoutTimestampAttr = attributes.find(
-              (attr) =>
-                attr.key ===
-                Buffer.from("packet_timeout_timestamp").toString("base64")
-            );
-            const timeoutTimestamp = timeoutTimestampAttr
-              ? Buffer.from(timeoutTimestampAttr.value, "base64").toString()
-              : undefined;
+        if (events) {
+          for (const event of events) {
+            if (event.type === "send_packet") {
+              const attributes = event.attributes;
+              const sourceChannelAttr = attributes.find(
+                (attr) =>
+                  attr.key ===
+                  Buffer.from("packet_src_channel").toString("base64")
+              );
+              const sourceChannel = sourceChannelAttr
+                ? Buffer.from(sourceChannelAttr.value, "base64").toString()
+                : undefined;
+              const destChannelAttr = attributes.find(
+                (attr) =>
+                  attr.key ===
+                  Buffer.from("packet_dst_channel").toString("base64")
+              );
+              const destChannel = destChannelAttr
+                ? Buffer.from(destChannelAttr.value, "base64").toString()
+                : undefined;
+              const sequenceAttr = attributes.find(
+                (attr) =>
+                  attr.key === Buffer.from("packet_sequence").toString("base64")
+              );
+              const sequence = sequenceAttr
+                ? Buffer.from(sequenceAttr.value, "base64").toString()
+                : undefined;
+              const timeoutHeightAttr = attributes.find(
+                (attr) =>
+                  attr.key ===
+                  Buffer.from("packet_timeout_height").toString("base64")
+              );
+              const timeoutHeight = timeoutHeightAttr
+                ? Buffer.from(timeoutHeightAttr.value, "base64").toString()
+                : undefined;
+              const timeoutTimestampAttr = attributes.find(
+                (attr) =>
+                  attr.key ===
+                  Buffer.from("packet_timeout_timestamp").toString("base64")
+              );
+              const timeoutTimestamp = timeoutTimestampAttr
+                ? Buffer.from(timeoutTimestampAttr.value, "base64").toString()
+                : undefined;
 
-            if (sourceChannel && destChannel && sequence) {
-              this.pushPendingHistoryWithCreatedAt({
-                txHash: uncommited.txHash,
-                sourceChainId: uncommited.sourceChainId,
-                sourceChannelId: sourceChannel,
-                destChainId: uncommited.destChainId,
-                destChannelId: destChannel,
-                sequence,
-                sender: uncommited.sender,
-                recipient: uncommited.recipient,
-                amount: uncommited.amount,
-                timeoutHeight,
-                timeoutTimestamp,
-                createdAt: uncommited.createdAt,
-              });
+              if (sourceChannel && destChannel && sequence) {
+                this.pushPendingHistoryWithCreatedAt({
+                  txHash: uncommited.txHash,
+                  sourceChainId: uncommited.sourceChainId,
+                  sourceChannelId: sourceChannel,
+                  destChainId: uncommited.destChainId,
+                  destChannelId: destChannel,
+                  sequence,
+                  sender: uncommited.sender,
+                  recipient: uncommited.recipient,
+                  amount: uncommited.amount,
+                  timeoutHeight,
+                  timeoutTimestamp,
+                  createdAt: uncommited.createdAt,
+                });
+              }
             }
           }
         }
@@ -456,11 +448,13 @@ export class IBCTransferHistoryStore {
 
     // eslint-disable-next-line
     const history = this.historyMapByTxHash.get(txHash)!;
-    const status = yield* toGenerator(this.traceHistoryStatus(history));
+    const status = yield* toGenerator(this.traceHistroyStatus(history));
     if (history.status !== status) {
       history.status = status;
 
-      this.onHistoryChangedHandler?.(history);
+      for (const handler of this.onHistoryChangedHandlers) {
+        handler(history);
+      }
 
       yield this.save();
 

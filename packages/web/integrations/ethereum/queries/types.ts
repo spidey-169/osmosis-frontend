@@ -1,6 +1,8 @@
-import { Interface } from "ethers";
+import { Interface } from "@ethersproject/abi";
 
-/** ABI spec for interfacing with ERC20 token contracts on EVM chains. */
+/** ABI spec for interfacing with ERC20 token contracts on EVM chains.
+ *  Source: https://ethereumdev.io/abi-for-erc20-contract-on-ethereum/
+ */
 export const Erc20Abi = new Interface([
   {
     constant: true,

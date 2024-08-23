@@ -1,13 +1,10 @@
-import { observer } from "mobx-react-lite";
 import Image from "next/image";
-import { FunctionComponent } from "react";
-
-import { Icon } from "~/components/assets";
-import { AssetCell as Cell } from "~/components/table/cells/types";
-import { Tooltip } from "~/components/tooltip";
-import { Button } from "~/components/ui/button";
-import { useTranslation } from "~/hooks";
-import { useStore } from "~/stores";
+import classNames from "classnames";
+import { FunctionComponent, useState } from "react";
+import { WalletStatus } from "@keplr-wallet/stores";
+import { AssetCell as Cell } from "./types";
+import { useStore } from "../../../stores";
+import { useTranslation } from "react-multi-lang";
 
 export const TransferButtonCell: FunctionComponent<
   {
@@ -15,54 +12,49 @@ export const TransferButtonCell: FunctionComponent<
     depositUrlOverride?: string;
     withdrawUrlOverride?: string;
   } & Partial<Cell>
-> = observer(
-  ({
-    type,
-    depositUrlOverride,
-    withdrawUrlOverride,
-    chainId,
-    coinDenom,
-    onWithdraw,
-    onDeposit,
-  }) => {
-    const { t } = useTranslation();
-    const { accountStore } = useStore();
+> = ({
+  type,
+  depositUrlOverride,
+  withdrawUrlOverride,
+  chainId,
+  coinDenom,
+  isUnstable,
+  onWithdraw,
+  onDeposit,
+  onBuyOsmo,
+}) => {
+  const t = useTranslation();
+  const { chainStore, accountStore } = useStore();
 
-    const isChainSupported = Boolean(
-      accountStore.connectedWalletSupportsChain(chainId ?? "")?.value ?? true
-    );
+  const account = accountStore.getAccount(chainStore.osmosis.chainId);
 
-    const isDepositSupported = isChainSupported || Boolean(depositUrlOverride);
-    const isWithdrawSupported =
-      isChainSupported || Boolean(withdrawUrlOverride);
-    const notSupportedTooltipText = t("assetNotCompatible");
-
-    return type === "withdraw" ? (
-      chainId && coinDenom && onWithdraw ? (
-        <Tooltip
-          disabled={isWithdrawSupported}
-          content={notSupportedTooltipText}
-        >
-          <TransferButton
-            disabled={!isWithdrawSupported}
-            externalUrl={withdrawUrlOverride}
-            label={t("assets.table.withdrawButton")}
-            action={() => onWithdraw?.(chainId, coinDenom, withdrawUrlOverride)}
-          />
-        </Tooltip>
-      ) : null
-    ) : chainId && coinDenom && onDeposit ? (
-      <Tooltip disabled={isDepositSupported} content={notSupportedTooltipText}>
-        <TransferButton
-          disabled={!isDepositSupported}
-          externalUrl={depositUrlOverride}
-          label={t("assets.table.depositButton")}
-          action={() => onDeposit?.(chainId, coinDenom, depositUrlOverride)}
-        />
-      </Tooltip>
-    ) : null;
-  }
-);
+  return type === "withdraw" ? (
+    chainId && coinDenom && onWithdraw ? (
+      <TransferButton
+        disabled={isUnstable}
+        externalUrl={withdrawUrlOverride}
+        label={t("assets.table.withdrawButton")}
+        action={() => onWithdraw?.(chainId, coinDenom, withdrawUrlOverride)}
+      />
+    ) : null
+  ) : chainId && coinDenom && (onDeposit || onBuyOsmo) ? (
+    <TransferButton
+      disabled={
+        isUnstable ||
+        (onBuyOsmo && account.walletStatus !== WalletStatus.Loaded)
+      }
+      externalUrl={depositUrlOverride}
+      label={
+        onBuyOsmo ? t("assets.table.buyOsmo") : t("assets.table.depositButton")
+      }
+      action={
+        onBuyOsmo
+          ? onBuyOsmo
+          : () => onDeposit?.(chainId, coinDenom, depositUrlOverride)
+      }
+    />
+  ) : null;
+};
 
 const TransferButton: FunctionComponent<{
   externalUrl?: string;
@@ -70,49 +62,61 @@ const TransferButton: FunctionComponent<{
   label: string;
   action: () => void;
 }> = ({ externalUrl, disabled, label, action }) => {
+  const [isHovering, setIsHovering] = useState(false);
   return externalUrl ? (
-    <Button
-      variant="ghost"
-      size="md"
-      className="flex gap-2 text-wosmongton-200 hover:text-rust-200"
-      disabled={disabled}
-      asChild
+    <a
+      className={classNames(
+        "flex items-center gap-1 pt-2 lg:pt-0 subtitle1 shrink-0 text-wosmongton-200",
+        { "opacity-30": disabled }
+      )}
+      rel="noreferrer"
+      href={externalUrl}
+      target="_blank"
+      style={
+        disabled ? { pointerEvents: "none", cursor: "default" } : undefined
+      }
+      onClick={action}
     >
-      <a
-        rel="noreferrer"
-        target="_blank"
-        href={externalUrl}
-        onClick={(event) => {
-          event.stopPropagation();
-          action();
-        }}
-      >
-        <span>{label}</span>
+      {label}
+      <div className="w-fit shrink-0">
         <Image
           alt="external transfer link"
           src="/icons/external-link.svg"
           height={13}
           width={13}
         />
-      </a>
-    </Button>
+      </div>
+    </a>
   ) : (
-    <Button
-      variant="ghost"
-      size="md"
-      className="flex gap-2 text-wosmongton-200 hover:text-rust-200"
-      onClick={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        action();
-      }}
+    <button
+      className="flex items-center gap-1 text-wosmongton-200 hover:text-rust-300 transition-colors subtitle1 disabled:opacity-30 hover:disabled:text-wosmongton-200"
+      onClick={action}
       disabled={disabled}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
     >
       <span>{label}</span>
-
-      <div className="h-fit shrink-0">
-        <Icon id="chevron-right" width={8} height={14} />
-      </div>
-    </Button>
+      {isHovering ? (
+        <div className="h-fit shrink-0">
+          <Image
+            alt="chevron"
+            src="/icons/chevron-right-rust.svg"
+            height={13}
+            width={13}
+            priority={true}
+          />
+        </div>
+      ) : (
+        <div className="h-fit shrink-0">
+          <Image
+            alt="chevron"
+            src="/icons/chevron-right.svg"
+            height={13}
+            width={13}
+            priority={true}
+          />
+        </div>
+      )}
+    </button>
   );
 };

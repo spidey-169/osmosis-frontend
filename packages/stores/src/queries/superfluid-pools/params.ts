@@ -1,9 +1,8 @@
 import { KVStore } from "@keplr-wallet/common";
-import { Dec } from "@keplr-wallet/unit";
-import { ChainGetter, ObservableChainQuery } from "@osmosis-labs/keplr-stores";
-import { computed, makeObservable } from "mobx";
-
+import { ChainGetter, ObservableChainQuery } from "@keplr-wallet/stores";
 import { SuperfluidParams } from "./types";
+import { computed, makeObservable } from "mobx";
+import { Dec } from "@keplr-wallet/unit";
 
 export class ObservableQuerySuperfluidParams extends ObservableChainQuery<SuperfluidParams> {
   constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {

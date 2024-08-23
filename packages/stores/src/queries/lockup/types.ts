@@ -11,7 +11,17 @@ export type AccountUnlockableCoins = {
 };
 
 export type AccountLockedLongerDuration = {
-  locks: PeriodLock[];
+  locks: {
+    ID: string;
+    owner: string;
+    duration: string;
+    /** UTC */
+    end_time: string;
+    coins: {
+      denom: string;
+      amount: string;
+    }[];
+  }[];
 };
 
 export type SyntheticLockupsByLockId = {
@@ -20,17 +30,5 @@ export type SyntheticLockupsByLockId = {
     synth_denom: string;
     end_time: string;
     duration: string;
-  }[];
-};
-
-export type PeriodLock = {
-  ID: string;
-  owner: string;
-  duration: string;
-  /** UTC */
-  end_time: string;
-  coins: {
-    denom: string;
-    amount: string;
   }[];
 };

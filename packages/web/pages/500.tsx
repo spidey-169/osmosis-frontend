@@ -1,24 +1,18 @@
-import { NextPage } from "next";
 import Image from "next/image";
-import { NextSeo } from "next-seo";
-
-import { useTranslation } from "~/hooks";
+import { NextPage } from "next";
+import { useTranslation } from "react-multi-lang";
 
 const Custom500: NextPage = () => {
-  const { t } = useTranslation();
+  const t = useTranslation();
   return (
-    <div className="flex h-screen items-center justify-center gap-3 bg-osmoverse-900">
-      <NextSeo
-        title={t("seo.500.title")}
-        description={t("seo.500.description")}
-      />
+    <div className="bg-osmoverse-900 flex gap-3 justify-center items-center h-screen">
       <Image
         src="/icons/error-x.svg"
-        alt={t("seo.500.title")}
+        alt={t("505.title")}
         height={25}
         width={25}
       />
-      <h6>{t("seo.500.title")}</h6>
+      <h6>{t("505.title")}</h6>
     </div>
   );
 };

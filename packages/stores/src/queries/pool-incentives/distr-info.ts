@@ -1,9 +1,8 @@
+import { ChainGetter, ObservableChainQuery } from "@keplr-wallet/stores";
 import { KVStore } from "@keplr-wallet/common";
-import { Int } from "@keplr-wallet/unit";
-import { ChainGetter, ObservableChainQuery } from "@osmosis-labs/keplr-stores";
-import { computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
-
+import { computed, makeObservable } from "mobx";
+import { Int } from "@keplr-wallet/unit";
 import { DistrInfo } from "./types";
 
 export class ObservableQueryDistrInfo extends ObservableChainQuery<DistrInfo> {

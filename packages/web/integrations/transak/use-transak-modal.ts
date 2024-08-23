@@ -1,11 +1,6 @@
-import { WalletStatus } from "@cosmos-kit/core";
 import { useEffect, useState } from "react";
-
-import {
-  TransakCreatedOrder,
-  TransakSuccessfulOrder,
-} from "~/integrations/transak/types";
-import { useStore } from "~/stores";
+import { WalletStatus } from "@keplr-wallet/stores";
+import { useStore } from "../../stores";
 
 const IS_TESTNET = process.env.NEXT_PUBLIC_IS_TESTNET === "true";
 
@@ -14,29 +9,23 @@ export function useTransakModal(
   {
     onRequestClose,
     showOnMount,
-    onSuccessfulOrder,
-    onCreateOrder,
   }: {
     onRequestClose?: () => void;
     showOnMount?: boolean;
-    onSuccessfulOrder?: (orderData: TransakSuccessfulOrder) => void;
-    onCreateOrder?: (orderData: TransakCreatedOrder) => void;
   } = { showOnMount: false }
 ): {
   setModal: (show: boolean) => void;
 } {
   const { chainStore, accountStore } = useStore();
 
-  const account = accountStore.getWallet(chainStore.osmosis.chainId);
+  const account = accountStore.getAccount(chainStore.osmosis.chainId);
 
   const [transak, setTransak] = useState<any | null>(null);
   const [shouldShow, setShouldShow] = useState(false);
 
   useEffect(() => {
-    if (account?.walletStatus === WalletStatus.Connected) {
+    if (account.walletStatus === WalletStatus.Loaded) {
       import("@transak/transak-sdk" as any).then(({ default: transakSdk }) => {
-        const defaultCryptoCurrency = "OSMO";
-
         const transak = new transakSdk({
           apiKey: IS_TESTNET
             ? "1cb6bc52-acd6-4633-ba31-195843d0c69f" // STAGING API Key
@@ -45,8 +34,8 @@ export function useTransakModal(
           widgetHeight: "635px",
           widgetWidth: "500px",
           // Examples of some of the customization parameters you can pass
-          defaultCryptoCurrency, // Example 'ETH'
-          walletAddress: account.address, // Your customer's wallet address
+          defaultCryptoCurrency: "OSMO", // Example 'ETH'
+          walletAddress: account.bech32Address, // Your customer's wallet address
           themeColor: "6A67EA", // App theme color // wosmongton-700
           email: "", // Your customer's email address
           redirectURL: "",
@@ -54,42 +43,24 @@ export function useTransakModal(
 
         setTransak(transak);
 
-        // This will trigger when the widget is opened
-        transak.on(transak.EVENTS.TRANSAK_WIDGET_INITIALISED, () => {
-          document.documentElement.classList.remove("html-transak-closed");
-        });
-
         // This will trigger when the user closed the widget
         transak.on(transak.EVENTS.TRANSAK_WIDGET_CLOSE, () => {
           transak.close();
           setShouldShow(false);
           onRequestClose?.();
-          document.documentElement.classList.add("html-transak-closed");
         });
 
-        transak.on(
-          transak.EVENTS.TRANSAK_ORDER_CREATED,
-          (data: TransakCreatedOrder) => {
-            document.documentElement.classList.remove("html-transak-closed");
-            onCreateOrder?.(data);
-          }
-        );
-
         // This will trigger when the user marks payment is made.
-        transak.on(
-          transak.EVENTS.TRANSAK_ORDER_SUCCESSFUL,
-          (data: TransakSuccessfulOrder) => {
-            onSuccessfulOrder?.(data);
-            transak.close();
-            setShouldShow(false);
-            onRequestClose?.();
-          }
-        );
+        transak.on(transak.EVENTS.TRANSAK_ORDER_SUCCESSFUL, () => {
+          transak.close();
+          setShouldShow(false);
+          onRequestClose?.();
+        });
       });
     } else {
       setTransak(null);
     }
-  }, [account?.walletStatus]);
+  }, [account.walletStatus]);
 
   useEffect(() => {
     if ((showOnMount || shouldShow) && transak) {

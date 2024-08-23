@@ -2,9 +2,7 @@
 
 ![osmosis-banner-1200w](https://user-images.githubusercontent.com/4606373/167008669-fb3cafa8-e66e-4cdf-8599-3308039cc58c.png)
 
-> Note: this codebase is currently undergoing a refactor from Keplr's architecture to a tRPC stack to improve performance, maintainability, and development speed. We appreciate your patience as we work through these changes.
-
-## Overview 💻
+## Development 💻
 
 Our [frontend](https://app.osmosis.zone) is built with the following tools:
 
@@ -12,29 +10,22 @@ Our [frontend](https://app.osmosis.zone) is built with the following tools:
 - [React](https://reactjs.org/): ui
 - [Tailwind CSS](https://tailwindcss.com/): styling, theming
 - [Next.js](https://nextjs.org/): scaffolding/SSR/CDN/SEO
-  - We deploy on [Vercel](https://vercel.com/solutions/nextjs?utm_source=next-site&utm_medium=banner&utm_campaign=next-website) for optimizations out of the box, behind [CloudFlare](https://www.cloudflare.com/)
-- [Turbo Repo](https://turbo.build/repo): mono repo management with package script execution, with heavy emphasis on build caching (including shared remote caching in Vercel)
-- [Lerna](https://lerna.js.org/): libs release
+  - We deploy on [Vercel](https://vercel.com/solutions/nextjs?utm_source=next-site&utm_medium=banner&utm_campaign=next-website) for optimization (CDN, regions)
+- [lerna](https://lerna.js.org/): code organization; mono-repo management and libs release
 
 ## Deployment 🚀
-
-Install deps:
-
-```bash
-yarn
-```
 
 Start web server
 
 ```bash
-yarn start
+yarn && yarn build && yarn start
 ```
 
-## Contributing 👨‍💻
+### Contributing 👨‍💻
 
 We welcome and encourage contributions! We recommend looking for [issues labeled with "good-first-issue"](https://github.com/osmosis-labs/osmosis-frontend/contribute).
 
-Make sure [node](https://nodejs.org/en/) = 20 and [yarn](https://yarnpkg.com/getting-started/install) is installed.
+Make sure [node](https://nodejs.org/en/) >= 16 and [yarn](https://yarnpkg.com/getting-started/install) is installed.
 
 1. Install deps
 
@@ -42,46 +33,44 @@ Make sure [node](https://nodejs.org/en/) = 20 and [yarn](https://yarnpkg.com/get
 yarn
 ```
 
-**First time setup** If you're on the Osmosis foundation team and have a Vercel account set up, optionally sign into turbo repo using your Vercel account, and link the repo. This could give you instant builds by sharing the remote cache on our Vercel project:
+2. Build app
 
 ```bash
-npx turbo login
-...login via browser...
-npx turbo link
-...press y (yes) and choose "OsmoLabs" as the Vercel build scope...
+yarn build
 ```
 
-2.  Run local server at [`localhost:3000`](localhost:3000)
+3.  Run local server at [`localhost:3000`](localhost:3000)
 
 ```bash
 yarn dev
 ```
 
-## Testnet
+## Frontier 🤠
 
-To develop on the canonical public testnet, run:
+To reduce duplicated effort, `master` branch is used to deploy the frontier app as well. The frontier deployment has `NEXT_PUBLIC_IS_FRONTIER` env var set to `true`. If making
+updates to frontier, please target the master branch. Frontier assets are configured in `packages/web/config/ibc-assets.ts`.
+
+### Develop
+
+To develop with frontier configuration, use:
 
 ```bash
-yarn build:testnet && yarn start:testnet
+yarn build:frontier && yarn dev:frontier
 ```
 
-To develop against a local testnet, such as [localosmosis](https://github.com/osmosis-labs/osmosis/blob/1eb6506297c88dd3acc7d9c0a5f7c4e34ecd1b4e/tests/localosmosis/README.md), set this in your .env.local file in web package root:
+### Deploy
+
+To deploy frontier (the env var will be set for you):
 
 ```bash
-# Osmosis Chain Configuration Overwrite
-NEXT_PUBLIC_IS_TESTNET=true
-NEXT_PUBLIC_OSMOSIS_RPC_OVERWRITE=http://localhost:26657/
-NEXT_PUBLIC_OSMOSIS_REST_OVERWRITE=http://localhost:1317/
-NEXT_PUBLIC_OSMOSIS_CHAIN_ID_OVERWRITE=localosmosis
-# NEXT_PUBLIC_OSMOSIS_EXPLORER_URL_OVERWRITE=https://testnet.mintscan.io/osmosis-testnet/txs/{txHash}
-# NEXT_PUBLIC_OSMOSIS_CHAIN_NAME_OVERWRITE=Osmosis (Testnet v13.X latest)
+yarn build:frontier && yarn start:frontier
 ```
 
-You may need to go to the config folder to update the ibc-assets list and currencies in the osmosis chain info to view currencies on your testnet.
+Otherwise the non-frontier commands can be used with the env var set to true.
 
 ### Testnet
 
-Testnet version of the frontend uses `NEXT_PUBLIC_IS_TESTNET=true`. By default, it points to the canonical testnet, but packages/web/.env can be changed to point to [localosmosis](https://github.com/osmosis-labs/osmosis/tree/main/tests/localosmosis).
+Testnet version of the frontend uses `NEXT_PUBLIC_IS_TESTNET=true`.
 
 Dev:
 
@@ -94,37 +83,3 @@ Deploy:
 ```bash
 yarn build:testnet && yarn start:testnet
 ```
-
-Note: our currency registrar checks IBC hashes to see if they can be found via the denom_trace query in the IBC module on chain. If it's not found, it won't add it to the chain's list of currencies. Make sure IBC assets on testnet can be found in the testnet's IBC module state for test IBC assets to be visible. Otherwise, test assets (i.e. made via tokenfactory) can be added as native assets to the Osmosis chain, simply by defining its base denom in the Osmosis chain info for testnet.
-
-## Releases
-
-> Note: releases are suspended until the refactor is complete. Please avoid importing packages from this repo until further notice.
-
-Release tags are for the published [npm packages](https://www.npmjs.com/org/osmosis-labs), which are every package except for the web package. Updates to the app are released incrementally way via deployments from master branch.
-
-To start the release process:
-
-```bash
-yarn build:libs && npx lerna publish
-```
-
-## Translations 🌎🗺
-
-[![translation badge](https://inlang.com/badge?url=github.com/osmosis-labs/osmosis-frontend)](https://inlang.com/editor/github.com/osmosis-labs/osmosis-frontend?ref=badge)
-
-To add translations, you can manually edit the JSON translation files in `packages/web/translations`, use the [inlang](https://inlang.com/) online editor, or run `yarn machine-translate` to add missing translations using AI from Inlang.
-
-## Asset Listings
-
-Please see the asset [listing requirements](https://github.com/osmosis-labs/assetlists/blob/main/LISTING.md) to display assets on Osmosis Zone web app.
-
-### Showing Preview Assets
-
-To view preview assets for testing, append the following query parameter to the Osmosis URL:
-
-```
-?show_preview_assets=true
-```
-
-They'll be enabled for the tab's session. If you'd like to disable it, either open a new tab without the query parameter or append `?show_preview_assets=false`.

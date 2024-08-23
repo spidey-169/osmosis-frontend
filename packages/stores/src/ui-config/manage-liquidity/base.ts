@@ -1,34 +1,32 @@
+import { observable, makeObservable, action } from "mobx";
+import { TxChainSetter } from "@keplr-wallet/hooks";
+import { ChainGetter, IQueriesStore } from "@keplr-wallet/stores";
 import { CoinPretty } from "@keplr-wallet/unit";
-import { ChainGetter, IQueriesStore } from "@osmosis-labs/keplr-stores";
-import { action, makeObservable, observable } from "mobx";
+import { ObservableQueryGammPoolShare } from "../../queries";
 
-import { ObservableQueryPoolShare } from "../../queries";
-
-export class ManageLiquidityConfigBase {
+export class ManageLiquidityConfigBase extends TxChainSetter {
   @observable
   protected _poolId: string;
 
   @observable
   protected _sender: string;
 
-  @observable.ref
-  protected _queryPoolShare: ObservableQueryPoolShare;
+  @observable
+  protected _queryPoolShare: ObservableQueryGammPoolShare;
 
   @observable.ref
   protected _queriesStore: IQueriesStore;
 
-  @observable
-  chainId: string;
-
   constructor(
-    readonly chainGetter: ChainGetter,
+    chainGetter: ChainGetter,
     initialChainId: string,
     poolId: string,
     sender: string,
     queriesStore: IQueriesStore,
-    queryPoolShare: ObservableQueryPoolShare
+    queryPoolShare: ObservableQueryGammPoolShare
   ) {
-    this.chainId = initialChainId;
+    super(chainGetter, initialChainId);
+
     this._poolId = poolId;
     this._sender = sender;
     this._queriesStore = queriesStore;
@@ -39,11 +37,6 @@ export class ManageLiquidityConfigBase {
 
   get poolId(): string {
     return this._poolId;
-  }
-
-  @action
-  setChain(chainId: string) {
-    this.chainId = chainId;
   }
 
   @action
@@ -61,7 +54,7 @@ export class ManageLiquidityConfigBase {
   }
 
   @action
-  setQueryPoolShare(queryPoolShare: ObservableQueryPoolShare) {
+  setQueryPoolShare(queryPoolShare: ObservableQueryGammPoolShare) {
     this._queryPoolShare = queryPoolShare;
   }
 

@@ -1,5 +1,5 @@
-import classNames from "classnames";
 import React, { FunctionComponent } from "react";
+import classNames from "classnames";
 
 export const StatLabelValue: FunctionComponent<{
   containerClassName?: string;
@@ -13,7 +13,7 @@ export const StatLabelValue: FunctionComponent<{
     <div className={classNames("flex flex-col", containerClassName)}>
       <div
         className={classNames(
-          "subtitle2 md-[2px] text-white-disabled",
+          "subtitle2 text-white-disabled md-[2px]",
           labelClassName
         )}
       >

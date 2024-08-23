@@ -1,9 +1,9 @@
-import { ObservableWallet } from "~/integrations/wallets";
+import { Wallet } from "../wallets";
 
 type Method = "eth_getBalance" | "eth_sendTransaction" | "eth_call" | string;
 
 export interface EthWallet
-  extends ObservableWallet<
+  extends Wallet<
     {
       method: Method;
       params:
@@ -38,13 +38,11 @@ export const ChainNames: { [chainId: string]: string } = {
   "0x64": "Gnosis",
   "0x89": "Polygon Mainnet",
   "0x13881": "Mumbai",
-  "0x13a": "Filecoin - Mainnet",
   "0xfa": "Fantom Opera",
   "0xfa2": "Fantom Testnet",
   "0x504": "Moonbeam Mainnet",
   "0x507": "Moonbase Alpha",
   "0x2329": "Evmos",
-  "0xa4b1": "Arbitrum One",
   "0xa86a": "Avalanche C-Chain",
   "0xa869": "Avalanche Fuji Testnet",
   "0x4e454152": "Aurora Mainnet",

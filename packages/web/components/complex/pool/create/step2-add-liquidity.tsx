@@ -1,18 +1,17 @@
-import { observer } from "mobx-react-lite";
 import Image from "next/image";
 import { FunctionComponent } from "react";
-
-import { StepBase } from "~/components/complex/pool/create/step-base";
-import { StepProps } from "~/components/complex/pool/create/types";
-import { InputBox } from "~/components/input";
-import { useTranslation } from "~/hooks";
-import { useWindowSize } from "~/hooks";
+import { observer } from "mobx-react-lite";
+import { InputBox } from "../../../input";
+import { StepBase } from "./step-base";
+import { StepProps } from "./types";
+import { useWindowSize } from "../../../../hooks";
+import { useTranslation } from "react-multi-lang";
 
 export const Step2AddLiquidity: FunctionComponent<StepProps> = observer(
   (props) => {
     const { createPoolConfig: config } = props;
     const { isMobile } = useWindowSize();
-    const { t } = useTranslation();
+    const t = useTranslation();
 
     return (
       <StepBase step={2} {...props}>
@@ -27,11 +26,11 @@ export const Step2AddLiquidity: FunctionComponent<StepProps> = observer(
             return (
               <div
                 key={amountConfig.sendCurrency.coinDenom}
-                className="flex h-24 place-content-between items-center rounded-2xl border border-white-faint px-7 md:h-fit md:p-2"
+                className="h-24 md:h-fit flex px-7 md:p-2 items-center place-content-between border border-white-faint rounded-2xl"
               >
                 <div className="flex items-center">
                   {currency.coinImageUrl && (
-                    <div className="flex h-14 w-14 items-center overflow-hidden md:h-7 md:w-7">
+                    <div className="flex items-center w-14 h-14 md:h-7 md:w-7 overflow-hidden">
                       <Image
                         src={currency.coinImageUrl}
                         alt="token icon"
@@ -46,7 +45,7 @@ export const Step2AddLiquidity: FunctionComponent<StepProps> = observer(
                     ) : (
                       <h5>{justCoinDenom}</h5>
                     )}
-                    <div className="md:caption text-sm font-semibold text-osmoverse-400 md:text-xs">
+                    <div className="text-osmoverse-400 text-sm md:text-xs md:caption font-semibold">
                       {config.poolType === "weighted"
                         ? `${percentage}%`
                         : scalingFactor ?? "1"}
@@ -54,12 +53,12 @@ export const Step2AddLiquidity: FunctionComponent<StepProps> = observer(
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <div className="flex place-content-end items-center gap-1">
+                  <div className="flex items-center place-content-end gap-1">
                     <span className="caption">
                       {t("pools.createPool.available")}
                     </span>
                     <span
-                      className="caption cursor-pointer text-wosmongton-300"
+                      className="caption text-wosmongton-300 cursor-pointer"
                       onClick={() => amountConfig.setIsMax(true)}
                     >
                       {config.queryBalances

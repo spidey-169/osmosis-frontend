@@ -7,17 +7,21 @@ export type Gauge = {
     duration: string;
     timestamp: string;
   };
-  coins: {
-    denom: string;
-    amount: string;
-  }[];
+  coins: [
+    {
+      denom: string;
+      amount: string;
+    }
+  ];
   start_time: string;
   num_epochs_paid_over: string;
   filled_epochs: string;
-  distributed_coins: {
-    denom: string;
-    amount: string;
-  }[];
+  distributed_coins: [
+    {
+      denom: string;
+      amount: string;
+    }
+  ];
 };
 
 export type GaugeById = {

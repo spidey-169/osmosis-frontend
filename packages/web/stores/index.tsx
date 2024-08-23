@@ -1,88 +1,78 @@
-import React, { PropsWithChildren, useState } from "react";
-import { toast } from "react-toastify";
+import React, {
+  FunctionComponent,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+import { RootStore } from "./root";
+import { useKeplr } from "../hooks";
+import { AccountInitManagement } from "./account-init-management";
+import { useVisibilityState } from "../hooks/use-visibility-state";
 
-import { displayToast, ToastType } from "~/components/alert";
-import { Button } from "~/components/ui/button";
-import { useTranslation } from "~/hooks";
-import { RootStore } from "~/stores/root";
-import { api } from "~/utils/trpc";
+const storeContext = React.createContext<RootStore | null>(null);
 
-export const storeContext = React.createContext<RootStore | null>(null);
+// When the page is visible, refresh more often.
+const refreshIntervalOnVisible = 30 * 1000;
+// When the page is hidden, it refreshes less frequently.
+// Users may be looking at other tabs for a long time.
+// In this case, it is not necessary to refresh frequently, and if refresh frequently, it may burden the node.
+const refreshIntervalOnHidden = 5 * 60 * 1000;
 
-/** Once data is invalidated, React Query will automatically refetch data
- *  when the dependent component becomes visible. */
-export function refetchUserQueries(apiUtils: ReturnType<typeof api.useUtils>) {
-  apiUtils.edge.assets.getUserAsset.invalidate();
-  apiUtils.edge.assets.getUserAssets.invalidate();
-  apiUtils.edge.assets.getUserMarketAsset.invalidate();
-  apiUtils.edge.assets.getUserAssetsTotal.invalidate();
-  apiUtils.edge.assets.getUserBridgeAsset.invalidate();
-  apiUtils.edge.assets.getUserBridgeAssets.invalidate();
-  apiUtils.edge.staking.getUserDelegations.invalidate();
-  apiUtils.local.concentratedLiquidity.getUserPositions.invalidate();
-  apiUtils.local.concentratedLiquidity.getPositionDetails.invalidate();
-  apiUtils.edge.pools.getSharePool.invalidate();
-  apiUtils.edge.pools.getPool.invalidate();
-  apiUtils.edge.pools.getUserSharePool.invalidate();
-  apiUtils.edge.pools.getSharePoolBondDurations.invalidate();
-  apiUtils.local.balances.getUserBalances.invalidate();
-  apiUtils.local.bridgeTransfer.getSupportedAssetsBalances.invalidate();
-  apiUtils.edge.assets.getImmersiveBridgeAssets.invalidate();
-  apiUtils.edge.orderbooks.getAllOrders.invalidate();
-  apiUtils.edge.orderbooks.getClaimableOrders.invalidate();
-}
+export const StoreProvider: FunctionComponent = ({ children }) => {
+  const keplr = useKeplr();
 
-const EXCEEDS_1CT_NETWORK_FEE_LIMIT_TOAST_ID = "exceeds-1ct-network-fee-limit";
+  const [rootStore] = useState(() => new RootStore(keplr.getKeplr));
 
-export const StoreProvider = ({ children }: PropsWithChildren) => {
-  const apiUtils = api.useUtils();
-  const { t } = useTranslation();
-  const [rootStore] = useState(
-    () =>
-      new RootStore({
-        txEvents: {
-          onFulfill: () => refetchUserQueries(apiUtils),
-
-          /**
-           * This event is triggered when the network fee limit is exceeded.
-           * In this case we prompt the user to change the network fee limit
-           * if he wants to continue with the one-click trading session.
-           */
-          onExceeds1CTNetworkFeeLimit: ({ finish, continueTx }) => {
-            displayToast(
-              {
-                titleTranslationKey: "oneClickTrading.toast.networkFeeTooHigh",
-                captionElement: (
-                  <div className="flex flex-col items-start">
-                    <Button
-                      variant="link"
-                      className="!h-auto self-start !px-0 !py-0  text-wosmongton-300"
-                      onClick={() => {
-                        toast.dismiss(EXCEEDS_1CT_NETWORK_FEE_LIMIT_TOAST_ID);
-                        continueTx();
-                      }}
-                    >
-                      {t("oneClickTrading.toast.continueWithWallet")}
-                    </Button>
-                  </div>
-                ),
-              },
-              ToastType.ONE_CLICK_TRADING,
-              {
-                toastId: EXCEEDS_1CT_NETWORK_FEE_LIMIT_TOAST_ID,
-                onClose: () => {
-                  finish();
-                },
-                autoClose: 20_000,
-              }
-            );
-          },
-        },
-      })
+  const visibilityState = useVisibilityState();
+  const [refreshInterval, setRefreshInterval] = useState(
+    refreshIntervalOnVisible
   );
 
+  const refresh = useCallback(() => {
+    const queryPools = rootStore.queriesStore.get(
+      rootStore.chainStore.osmosis.chainId
+    ).osmosis!.queryGammPools;
+
+    if (!queryPools.isFetching) {
+      queryPools.fetch();
+    }
+
+    const priceStore = rootStore.priceStore;
+
+    if (!priceStore.isFetching) {
+      priceStore.fetch();
+    }
+  }, [
+    rootStore.chainStore.osmosis.chainId,
+    rootStore.priceStore,
+    rootStore.queriesStore,
+  ]);
+
+  useEffect(() => {
+    if (visibilityState === "visible") {
+      // Refresh query pools and price whenever page becomes visible
+
+      refresh();
+
+      setRefreshInterval(refreshIntervalOnVisible);
+    } else {
+      setRefreshInterval(refreshIntervalOnHidden);
+    }
+  }, [refresh, visibilityState]);
+
+  useEffect(() => {
+    const disposer = setInterval(refresh, refreshInterval);
+
+    return () => {
+      clearInterval(disposer);
+    };
+  }, [refresh, refreshInterval]);
+
   return (
-    <storeContext.Provider value={rootStore}>{children}</storeContext.Provider>
+    <storeContext.Provider value={rootStore}>
+      <AccountInitManagement />
+      {children}
+    </storeContext.Provider>
   );
 };
 

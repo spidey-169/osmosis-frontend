@@ -1,35 +1,24 @@
-import { ChainInfoInner } from "@osmosis-labs/keplr-stores";
-import { DeliverTxResponse } from "@osmosis-labs/stores";
-import { isSlippageError } from "@osmosis-labs/tx";
-import type { AppCurrency, ChainInfoWithExplorer } from "@osmosis-labs/types";
-import { toast } from "react-toastify";
-
-import { displayToast } from "~/components/alert/toast";
-import { ToastType } from "~/components/alert/types";
-
-import { prettifyTxError } from "./prettify";
-
-// Error code for timeout height reached in Cosmos SDK.
-// https://github.com/cosmos/cosmos-sdk/blob/8f6a94cd1f9f1c6bf1ad83a751da86270db92e02/types/errors/errors.go#L129
-const txTimeoutHeightReachedErrorCode = 30;
-
-const BROADCASTING_TOAST_ID = "broadcast";
+import { ChainInfoInner } from "@keplr-wallet/stores";
+import { isSlippageError, prettifyTxError } from "@osmosis-labs/stores";
+import { ChainInfoWithExplorer } from "../../stores/chain";
+import { displayToast } from "./toast";
+import { ToastType } from "./types";
 
 export function toastOnBroadcastFailed(
   getChain: (chainId: string) => ChainInfoInner<ChainInfoWithExplorer>
 ) {
   return (chainId: string, e?: Error) => {
-    let caption: string = "unknownError";
-    if (typeof e === "string") {
-      caption = e;
-    } else if (e instanceof Error || (e && "message" in e)) {
+    let caption: string = "Unknown error";
+    if (e instanceof Error) {
       caption = e.message;
+    } else if (typeof e === "string") {
+      caption = e;
     }
 
     displayToast(
       {
-        titleTranslationKey: "transactionFailed",
-        captionTranslationKey:
+        message: "Transaction Failed",
+        caption:
           prettifyTxError(caption, getChain(chainId).currencies) ?? caption,
       },
       ToastType.ERROR
@@ -41,13 +30,10 @@ export function toastOnBroadcast() {
   return () => {
     displayToast(
       {
-        titleTranslationKey: "transactionBroadcasting",
-        captionTranslationKey: "waitingForTransaction",
+        message: "Transaction Broadcasting",
+        caption: "Waiting for transaction to be included in the block",
       },
-      ToastType.LOADING,
-      {
-        toastId: BROADCASTING_TOAST_ID,
-      }
+      ToastType.LOADING
     );
   };
 }
@@ -55,40 +41,30 @@ export function toastOnBroadcast() {
 export function toastOnFulfill(
   getChain: (chainId: string) => ChainInfoInner<ChainInfoWithExplorer>
 ) {
-  return (chainId: string, tx: DeliverTxResponse) => {
+  return (chainId: string, tx: any) => {
     const chainInfo = getChain(chainId);
-    toast.dismiss(BROADCASTING_TOAST_ID);
     if (tx.code) {
       displayToast(
         {
-          titleTranslationKey: "transactionFailed",
-          captionTranslationKey: getErrorMessage(tx, chainInfo.currencies),
+          message: "Transaction Failed",
+          caption: isSlippageError(tx)
+            ? "Swap failed. Liquidity may not be sufficient. Try adjusting the allowed slippage."
+            : prettifyTxError(tx.log, chainInfo.currencies) ?? tx.log,
         },
         ToastType.ERROR
       );
     } else {
       displayToast(
         {
-          titleTranslationKey: "transactionSuccessful",
+          message: "Transaction Successful",
           learnMoreUrl: chainInfo.raw.explorerUrlToTx.replace(
             "{txHash}",
-            tx.transactionHash.toUpperCase()
+            tx.hash.toUpperCase()
           ),
-          learnMoreUrlCaption: "viewExplorer",
+          learnMoreUrlCaption: "View explorer",
         },
         ToastType.SUCCESS
       );
     }
   };
 }
-
-// gets the error message depending on the transaction.
-const getErrorMessage = (tx: DeliverTxResponse, currencies: AppCurrency[]) => {
-  if (tx.code === txTimeoutHeightReachedErrorCode) {
-    return "errors.txTimedOutError";
-  }
-
-  return isSlippageError(tx)
-    ? "swapFailed"
-    : prettifyTxError(tx.rawLog ?? "", currencies) ?? tx.rawLog;
-};

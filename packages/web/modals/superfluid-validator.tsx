@@ -1,163 +1,116 @@
-import { CoinPretty, RatePretty } from "@keplr-wallet/unit";
-import { BondStatus } from "@osmosis-labs/types";
-import classNames from "classnames";
+import { FunctionComponent, useState, useMemo } from "react";
 import { observer } from "mobx-react-lite";
-import { FunctionComponent, useMemo, useState } from "react";
+import { Staking } from "@keplr-wallet/stores";
+import { CoinPretty, RatePretty } from "@keplr-wallet/unit";
+import { ModalBase, ModalBaseProps } from "./base";
+import { useStore } from "../stores";
+import { SearchBox } from "../components/input";
+import { Button } from "../components/buttons";
+import { Table } from "../components/table";
+import { ValidatorInfoCell } from "../components/table/cells/";
+import { InfoTooltip } from "../components/tooltip";
+import { useFilteredData, useSortedData } from "../hooks/data";
+import { useWindowSize } from "../hooks/window";
+import { useTranslation } from "react-multi-lang";
 
-import { SearchBox } from "~/components/input";
-import { Spinner } from "~/components/loaders";
-import { SkeletonLoader } from "~/components/loaders/skeleton-loader";
-import { Table } from "~/components/table";
-import { ValidatorInfoCell } from "~/components/table/cells/";
-import { InfoTooltip } from "~/components/tooltip";
-import { Button } from "~/components/ui/button";
-import { useTranslation } from "~/hooks";
-import { useWindowSize } from "~/hooks";
-import { useFilteredData, useSortedData } from "~/hooks/data";
-import { ModalBase, ModalBaseProps } from "~/modals/base";
-import { useStore } from "~/stores";
-import { api } from "~/utils/trpc";
+interface Props extends ModalBaseProps {
+  availableBondAmount: CoinPretty;
+  onSelectValidator: (address: string) => void;
+}
 
-export const SuperfluidValidatorModal: FunctionComponent<
-  {
-    isSuperfluid?: boolean;
-    showDelegated?: boolean;
-    availableBondAmount?: CoinPretty;
-    onSelectValidator: (address: string) => void;
-    ctaLabel?: string;
-  } & ModalBaseProps
-> = observer((props) => {
-  const {
-    isSuperfluid = true,
-    showDelegated = true,
-    availableBondAmount,
-    onSelectValidator,
-    ctaLabel,
-  } = props;
-  const { t } = useTranslation();
-  const { accountStore } = useStore();
-  const { isMobile } = useWindowSize();
+export const SuperfluidValidatorModal: FunctionComponent<Props> = observer(
+  (props) => {
+    const { availableBondAmount, onSelectValidator } = props;
+    const t = useTranslation();
+    const { chainStore, queriesStore, accountStore } = useStore();
+    const { isMobile } = useWindowSize();
 
-  const account = accountStore.getWallet(accountStore.osmosisChainId);
+    const { chainId } = chainStore.osmosis;
+    const account = accountStore.getAccount(chainId);
+    const queries = queriesStore.get(chainId);
+    const queryValidators = queries.cosmos.queryValidators.getQueryStatus(
+      Staking.BondStatus.Bonded
+    );
 
-  const { data: validators, isLoading: isLoadingAllValidators } =
-    api.edge.staking.getValidators.useQuery({
-      status: BondStatus.Bonded,
-    });
+    const activeValidators = queryValidators.validators;
+    const userValidatorDelegations =
+      queries.cosmos.queryDelegations.getQueryBech32Address(
+        account.bech32Address
+      ).delegations;
+    const isSendingMsg = account.txTypeInProgress !== "";
 
-  const { data: userValidatorDelegations, isLoading: isLoadingUserValidators } =
-    api.edge.staking.getUserDelegations.useQuery(
-      {
-        userOsmoAddress: account?.address ?? "",
-      },
-      {
-        enabled: !!account?.address,
+    // vals from 0..<1 used to initially & randomly sort validators in `isDelegated` key
+    const randomSortVals = useMemo(
+      () => activeValidators.map(() => Math.random()),
+      [activeValidators]
+    );
+
+    // get minimum info for display, mark validators users are delegated to
+    const activeDelegatedValidators: {
+      address: string;
+      validatorName?: string;
+      validatorImgSrc?: string;
+      validatorCommission: RatePretty;
+      isDelegated: number;
+    }[] = activeValidators.map(
+      ({ operator_address, description, commission }, index) => {
+        const validatorImg =
+          queryValidators.getValidatorThumbnail(operator_address);
+        return {
+          address: operator_address,
+          validatorName: description.moniker,
+          validatorImgSrc: validatorImg === "" ? undefined : validatorImg,
+          validatorCommission: new RatePretty(commission.commission_rates.rate),
+          isDelegated: userValidatorDelegations.some(
+            ({ delegation }) =>
+              delegation.validator_address === operator_address
+          )
+            ? 1 // = new Dec(1)
+            : randomSortVals[index], // = new Dec(0..<1)
+        };
       }
     );
 
-  const isLoadingValidators = isLoadingAllValidators || isLoadingUserValidators;
+    const [
+      sortKey,
+      setSortKey,
+      sortDirection,
+      _,
+      toggleSortDirection,
+      sortedData,
+    ] = useSortedData(activeDelegatedValidators, "isDelegated", "descending");
+    const [query, setQuery, searchedValidators] = useFilteredData(sortedData, [
+      "validatorName",
+      "validatorCommission",
+      "isDelegated",
+    ]);
+    const [selectedValidatorAddress, setSelectedValidatorAddress] = useState<
+      string | null
+    >(null);
 
-  const { data: osmoEquivalent, isLoading: isLoadingOsmoEquivalent } =
-    api.edge.staking.getOsmoEquivalent.useQuery(
-      availableBondAmount?.toCoin() ?? { denom: "", amount: "" },
-      {
-        enabled:
-          !!availableBondAmount && availableBondAmount.toDec().isPositive(),
-      }
-    );
-
-  // vals from 0..<1 used to initially & randomly sort validators in `isDelegated` key
-  const randomSortVals = useMemo(
-    () => validators?.map(() => Math.random()) ?? [],
-    [validators]
-  );
-
-  // get minimum info for display, mark validators users are delegated to
-  const activeDelegatedValidators: {
-    address: string;
-    validatorName?: string;
-    validatorImgSrc?: string;
-    validatorCommission: RatePretty;
-    isDelegated: number;
-  }[] = useMemo(
-    () =>
-      validators?.map(
-        (
-          { operator_address, description, commission, validatorImgSrc },
-          index
-        ) => {
-          return {
-            address: operator_address,
-            validatorName: description.moniker,
-            validatorImgSrc:
-              validatorImgSrc === "" ? undefined : validatorImgSrc,
-            validatorCommission: new RatePretty(
-              commission.commission_rates.rate
-            ),
-            isDelegated: !showDelegated
-              ? 1
-              : userValidatorDelegations?.some(
-                  ({ delegation }) =>
-                    delegation.validator_address === operator_address
-                )
-              ? 1 // = new Dec(1)
-              : randomSortVals[index], // = new Dec(0..<1)
-          };
-        }
-      ) ?? [],
-    [validators, userValidatorDelegations, showDelegated, randomSortVals]
-  );
-
-  const [
-    sortKey,
-    setSortKey,
-    sortDirection,
-    _,
-    toggleSortDirection,
-    sortedData,
-  ] = useSortedData(activeDelegatedValidators, "isDelegated", "descending");
-  const [query, setQuery, searchedValidators] = useFilteredData(sortedData, [
-    "validatorName",
-    "validatorCommission",
-    "isDelegated",
-  ]);
-  const [selectedValidatorAddress, setSelectedValidatorAddress] = useState<
-    string | null
-  >(null);
-
-  return (
-    <ModalBase {...props}>
-      <div className="mt-8 flex flex-col gap-4 md:gap-2">
-        <div className="mb-1 flex place-content-between items-center gap-2.5 md:flex-col">
-          {isSuperfluid && (
+    return (
+      <ModalBase {...props}>
+        <div className="flex flex-col gap-4 md:gap-2 mt-8">
+          <div className="flex md:flex-col gap-2.5 mb-1 items-center place-content-between">
             <span className="subtitle1 mr-auto">
               {t("superfluidValidator.choose")}
             </span>
-          )}
-          <SearchBox
-            className={isMobile ? "!w-full !rounded" : undefined}
-            currentValue={query}
-            onInput={setQuery}
-            placeholder={t("superfluidValidator.search")}
-            size={isMobile ? "medium" : "small"}
-          />
-        </div>
-        <div className="h-72 overflow-x-clip overflow-y-scroll">
-          {isLoadingValidators ? (
-            <div className="mx-auto w-fit pt-4">
-              <Spinner />
-            </div>
-          ) : (
+            <SearchBox
+              className={isMobile ? "!rounded !w-full h-11" : undefined}
+              currentValue={query}
+              onInput={setQuery}
+              placeholder={t("superfluidValidator.search")}
+            />
+          </div>
+          <div className="overflow-y-scroll overflow-x-clip h-72">
             <Table
               className="w-full"
-              headerTrClassName="!bg-osmoverse-800 top-0 !h-11"
+              tHeadClassName="sticky top-0"
+              headerTrClassName="!h-11"
               columnDefs={[
                 {
                   display: t("superfluidValidator.columns.validator"),
-                  className: classNames(
-                    "text-left",
-                    isMobile ? "caption" : undefined
-                  ),
+                  className: isMobile ? "caption" : undefined,
                   sort:
                     sortKey === "validatorName"
                       ? {
@@ -169,10 +122,7 @@ export const SuperfluidValidatorModal: FunctionComponent<
                 },
                 {
                   display: t("superfluidValidator.columns.commission"),
-                  className: classNames(
-                    "text-right !pr-3",
-                    isMobile ? "caption" : undefined
-                  ),
+                  className: `text-right ${isMobile ? "caption" : undefined}`,
                   sort:
                     sortKey === "validatorCommission"
                       ? {
@@ -189,7 +139,7 @@ export const SuperfluidValidatorModal: FunctionComponent<
                 makeClass: () =>
                   `!h-fit ${
                     address === selectedValidatorAddress
-                      ? "border border-osmoverse-500"
+                      ? "bg-osmoverse-800 border border-osmoverse-500"
                       : isDelegated === 1
                       ? "bg-osmoverse-800"
                       : "bg-osmoverse-900"
@@ -204,28 +154,25 @@ export const SuperfluidValidatorModal: FunctionComponent<
                 ]
               )}
             />
-          )}
-        </div>
-        {availableBondAmount && (
-          <div className="caption flex flex-col gap-4 px-4 py-3 text-osmoverse-300 md:gap-2">
-            <div className="flex place-content-between items-center">
+          </div>
+          <div className="flex flex-col md:gap-2 gap-4 py-3 px-4 caption text-osmoverse-300">
+            <div className="flex items-center place-content-between">
               <span>{t("superfluidValidator.bondedAmount")}</span>
               <span>{availableBondAmount.trim(true).toString()}</span>
             </div>
-            <div className="flex place-content-between items-center">
+            <div className="flex items-center place-content-between">
               <span>
                 {isMobile
                   ? t("superfluidValidator.estimationMobile")
                   : t("superfluidValidator.estimation")}
               </span>
               <span className="flex items-center">
-                <SkeletonLoader
-                  className={classNames({ "w-6": isLoadingOsmoEquivalent })}
-                  isLoaded={!isLoadingOsmoEquivalent}
-                >
-                  ~
-                  {osmoEquivalent?.maxDecimals(3).trim(true).toString() ?? null}
-                </SkeletonLoader>
+                ~
+                {queries.osmosis?.querySuperfluidOsmoEquivalent
+                  .calculateOsmoEquivalent(availableBondAmount)
+                  .maxDecimals(3)
+                  .trim(true)
+                  .toString() ?? "0"}
                 <InfoTooltip
                   className="ml-1"
                   content={t("superfluidValidator.estimationInfo")}
@@ -233,23 +180,18 @@ export const SuperfluidValidatorModal: FunctionComponent<
               </span>
             </div>
           </div>
-        )}
-        <Button
-          disabled={
-            selectedValidatorAddress === null ||
-            account?.txTypeInProgress !== "" ||
-            isLoadingAllValidators ||
-            isLoadingUserValidators
-          }
-          onClick={() => {
-            if (selectedValidatorAddress !== null) {
-              onSelectValidator(selectedValidatorAddress);
-            }
-          }}
-        >
-          {ctaLabel ?? t("superfluidValidator.buttonBond")}
-        </Button>
-      </div>
-    </ModalBase>
-  );
-});
+          <Button
+            disabled={selectedValidatorAddress === null || isSendingMsg}
+            onClick={() => {
+              if (selectedValidatorAddress !== null) {
+                onSelectValidator(selectedValidatorAddress);
+              }
+            }}
+          >
+            {t("superfluidValidator.buttonBond")}
+          </Button>
+        </div>
+      </ModalBase>
+    );
+  }
+);

@@ -1,15 +1,14 @@
 import { Dec } from "@keplr-wallet/unit";
 
-// TODO: Change this type from TBalance generic to SortableTableCell
 /** Sorts assets by positive fiat value first, then by order in config (as received). */
-export function initialAssetsSort<TBalance extends { fiatValueRaw?: Dec }>(
+export function initialAssetsSort<TBalance extends { fiatValueRaw?: string }>(
   ibcBalances: TBalance[]
 ): TBalance[] {
-  const posBals = ibcBalances.filter((b) => !b.fiatValueRaw?.isZero());
+  const posBals = ibcBalances.filter((b) => b.fiatValueRaw !== "0");
   const posBalsSorted = posBals.sort((a, b) => {
     if (!a.fiatValueRaw || !b.fiatValueRaw) return 0;
-    const aDec = a.fiatValueRaw;
-    const bDec = b.fiatValueRaw;
+    const aDec = new Dec(a.fiatValueRaw);
+    const bDec = new Dec(b.fiatValueRaw);
     if (aDec.gt(bDec)) {
       return -1;
     } else if (aDec.lt(bDec)) {
@@ -20,6 +19,6 @@ export function initialAssetsSort<TBalance extends { fiatValueRaw?: Dec }>(
 
   return [
     ...posBalsSorted,
-    ...ibcBalances.filter((b) => b.fiatValueRaw?.isZero()),
+    ...ibcBalances.filter((b) => b.fiatValueRaw === "0"),
   ];
 }

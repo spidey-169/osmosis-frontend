@@ -1,8 +1,7 @@
-import { getKeyByValue } from "@osmosis-labs/utils";
 import { numberToHex } from "web3-utils";
-
-import { ChainNames, SendFn } from "~/integrations/ethereum/types";
-import type { EthereumProvider } from "~/window";
+import type { EthereumProvider } from "../../window";
+import { getKeyByValue } from "../../components/utils";
+import { SendFn, ChainNames } from "./types";
 
 export function switchToChain(
   request: SendFn,
@@ -61,8 +60,7 @@ export function switchToChain(
         });
 
         // try again
-        switchToChain(request, chainName).then(resolve);
-        return;
+        await switchToChain(request, chainName);
       } else if (e.code === -32002) {
         // -32002: Request of type 'wallet_switchEthereumChain' already pending
         reject("switchToChain: switch in progress");
@@ -82,8 +80,6 @@ export function withEthInWindow<T>(
   if (
     typeof window !== "undefined" &&
     typeof window.ethereum !== "undefined" &&
-    typeof document !== "undefined" &&
-    /complete|interactive|loaded/.test(document.readyState) &&
     window.ethereum.isMetaMask
   ) {
     return doTask(window.ethereum);

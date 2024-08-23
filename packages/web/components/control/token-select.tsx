@@ -1,18 +1,16 @@
-import { AppCurrency } from "@keplr-wallet/types";
-import { CoinPretty } from "@keplr-wallet/unit";
-import classNames from "classnames";
-import { observer } from "mobx-react-lite";
 import Image from "next/image";
 import { FunctionComponent, useEffect, useRef } from "react";
-
-import { Icon } from "~/components/assets";
+import { observer } from "mobx-react-lite";
+import { AppCurrency } from "@keplr-wallet/types";
+import { CoinPretty } from "@keplr-wallet/unit";
+import { useStore } from "../../stores";
+import { TokenSelectModal } from "../../modals";
 import {
   useBooleanWithWindowEvent,
   useFilteredData,
   useWindowSize,
-} from "~/hooks";
-import { TokenSelectModal } from "~/modals";
-import { useStore } from "~/stores";
+} from "../../hooks";
+import classNames from "classnames";
 
 /** Will display balances if provided `CoinPretty` objects. Assumes denoms are unique. */
 export const TokenSelect: FunctionComponent<{
@@ -43,17 +41,18 @@ export const TokenSelect: FunctionComponent<{
       setDropdownState === undefined ? setIsSelectOpenLocal : setDropdownState;
 
     const inputRef = useRef<HTMLInputElement | null>(null);
-    const selectedToken = tokens.find(
-      (token) =>
-        (token instanceof CoinPretty ? token.denom : token.coinDenom) ===
+    const selectedToken = tokens.find((token) =>
+      (token instanceof CoinPretty ? token.denom : token.coinDenom).includes(
         selectedTokenDenom
+      )
     );
 
     const dropdownTokens = tokens
       .filter(
         (token) =>
-          (token instanceof CoinPretty ? token.denom : token.coinDenom) !==
-          selectedTokenDenom
+          !(
+            token instanceof CoinPretty ? token.denom : token.coinDenom
+          ).includes(selectedTokenDenom)
       )
       .map((token) => ({
         token,
@@ -61,7 +60,7 @@ export const TokenSelect: FunctionComponent<{
         chainName:
           chainStore.getChainFromCurrency(
             token instanceof CoinPretty ? token.denom : token.coinDenom
-          )?.prettyChainName ?? "",
+          )?.chainName ?? "",
       }))
       .sort((a, b) => {
         if (
@@ -128,7 +127,7 @@ export const TokenSelect: FunctionComponent<{
     }, [setIsSelectOpen]);
 
     return (
-      <div className="relative flex items-center justify-center md:justify-start">
+      <div className="flex md:justify-start justify-center items-center relative">
         {selectedCurrency && (
           <button
             className={classNames(
@@ -143,13 +142,12 @@ export const TokenSelect: FunctionComponent<{
             }}
           >
             {selectedCurrency.coinImageUrl && (
-              <div className="mr-1 h-[50px] w-[50px] shrink-0 overflow-hidden rounded-full md:h-[30px] md:w-[30px]">
+              <div className="w-[50px] h-[50px] md:h-7 md:w-7 overflow-hidden shrink-0 mr-1">
                 <Image
                   src={selectedCurrency.coinImageUrl}
                   alt="token icon"
                   width={isMobile ? 30 : 50}
                   height={isMobile ? 30 : 50}
-                  className="h-[50px] md:h-[30px]"
                 />
               </div>
             )}
@@ -161,21 +159,22 @@ export const TokenSelect: FunctionComponent<{
                   <h5>{selectedDenom}</h5>
                 )}
                 {canSelectTokens && (
-                  <div className="ml-3 w-5 md:ml-2 md:pb-1.5">
-                    <Icon
-                      id="chevron-down"
-                      width={20}
-                      height={8}
-                      className={`text-osmoverse-400 opacity-40 transition-transform duration-100 group-hover:opacity-100 ${
+                  <div className="w-5 ml-3 md:ml-2 md:pb-1.5">
+                    <Image
+                      className={`opacity-40 group-hover:opacity-100 transition-transform duration-100 ${
                         isSelectOpen ? "rotate-180" : "rotate-0"
                       }`}
+                      src="/icons/chevron-down.svg"
+                      alt="select icon"
+                      width={20}
+                      height={8}
                     />
                   </div>
                 )}
               </div>
-              <div className="subtitle2 md:caption w-24 text-osmoverse-400">
+              <div className="w-24 subtitle2 md:caption text-osmoverse-400">
                 {chainStore.getChainFromCurrency(selectedCurrency.coinDenom)
-                  ?.prettyChainName ?? ""}
+                  ?.chainName ?? ""}
               </div>
             </div>
           </button>

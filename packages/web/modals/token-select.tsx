@@ -1,15 +1,14 @@
-import { AppCurrency, IBCCurrency } from "@keplr-wallet/types";
-import { CoinPretty } from "@keplr-wallet/unit";
-import classNames from "classnames";
-import { observer } from "mobx-react-lite";
 import Image from "next/image";
+import { observer } from "mobx-react-lite";
 import { FunctionComponent } from "react";
-
-import { SearchBox } from "~/components/input";
-import { InputProps } from "~/components/types";
-import { useTranslation } from "~/hooks";
-import { ModalBase, ModalBaseProps } from "~/modals/base";
-import { useStore } from "~/stores";
+import { CoinPretty } from "@keplr-wallet/unit";
+import { AppCurrency, IBCCurrency } from "@keplr-wallet/types";
+import { InputProps } from "../components/types";
+import { SearchBox } from "../components/input";
+import { t } from "react-multi-lang";
+import { useStore } from "../stores";
+import { ModalBase, ModalBaseProps } from "./base";
+import classNames from "classnames";
 
 /** Intended for mobile use only - full screen alternative to token select dropdown.
  *
@@ -25,11 +24,10 @@ export const TokenSelectModal: FunctionComponent<
   } & InputProps<string>
 > = observer((props) => {
   const { priceStore } = useStore();
-  const { t } = useTranslation();
 
   return (
     <ModalBase
-      className="!rounded-xl !p-0"
+      className="!p-0 !rounded-xl"
       {...props}
       hideCloseButton
       title=""
@@ -44,10 +42,9 @@ export const TokenSelectModal: FunctionComponent<
           currentValue={props.currentValue}
           onInput={(value) => props.onInput(value)}
           onFocus={props.onFocus}
-          size="large"
         />
       </div>
-      <ul className="max-h-128 flex flex-col overflow-y-auto md:max-h-64">
+      <ul className="flex flex-col max-h-64 overflow-y-auto">
         {props.tokens.map((t) => {
           const currency =
             t.token instanceof CoinPretty ? t.token.currency : t.token;
@@ -63,7 +60,7 @@ export const TokenSelectModal: FunctionComponent<
 
           const tokenAmount =
             t.token instanceof CoinPretty
-              ? t.token.hideDenom(true).maxDecimals(8).trim(true).toString()
+              ? t.token.hideDenom(true).trim(true).toString()
               : undefined;
           const tokenPrice =
             t.token instanceof CoinPretty
@@ -73,17 +70,17 @@ export const TokenSelectModal: FunctionComponent<
           return (
             <li
               key={currency.coinDenom}
-              className="mx-3 my-1 flex cursor-pointer items-center justify-between rounded-2xl px-4 py-2.5 hover:bg-osmoverse-900"
+              className="flex justify-between items-center rounded-2xl py-2.5 px-4 my-1 hover:bg-osmoverse-900 cursor-pointer mx-3"
               onClick={(e) => {
                 e.stopPropagation();
                 props.onSelect(coinDenom);
                 props.onRequestClose();
               }}
             >
-              <button className="flex w-full items-center justify-between text-left">
+              <button className="flex items-center justify-between text-left w-full">
                 <div className="flex items-center">
                   {coinImageUrl && (
-                    <div className="mr-4 h-8 w-8 rounded-full">
+                    <div className="w-8 h-8 mr-4">
                       <Image
                         src={coinImageUrl}
                         alt="token icon"
@@ -94,7 +91,7 @@ export const TokenSelectModal: FunctionComponent<
                   )}
                   <div>
                     <h6 className="text-white-full">{justDenom}</h6>
-                    <div className="md:caption text-left font-semibold text-osmoverse-400">
+                    <div className="text-osmoverse-400 text-left md:caption font-semibold">
                       {showChannel ? `${networkName} ${channel}` : networkName}
                     </div>
                   </div>

@@ -1,6 +1,4 @@
-import { ReactNode } from "react";
-
-import { InputProps } from "~/components/types";
+import { InputProps } from "../types";
 
 export interface ToggleProps<T = boolean> {
   isOn: boolean;
@@ -9,13 +7,12 @@ export interface ToggleProps<T = boolean> {
 
 export interface MenuOption {
   id: string;
-  display: string | ReactNode;
+  display: string;
 }
 
 export interface MenuSelectProps {
   options: MenuOption[];
   selectedOptionId?: string;
-  defaultSelectedOptionId?: string;
   onSelect: (optionId: string) => void;
 }
 

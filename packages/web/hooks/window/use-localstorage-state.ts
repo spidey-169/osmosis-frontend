@@ -1,4 +1,3 @@
-import { useCallback } from "react";
 import { useEffect, useState } from "react";
 
 /** Stores and syncs to a value in `localStorage` at `key`.
@@ -27,20 +26,16 @@ export function useLocalStorageState<T>(
     }
   }, [key, setStoredValue]);
 
-  const setValue = useCallback(
-    (value: T) => {
-      try {
-        if (typeof window !== "undefined" && key) {
-          window.localStorage.setItem(key, JSON.stringify(value));
-        }
-
-        setStoredValue(value);
-      } catch (error) {
-        console.error(error);
+  const setValue = (value: T) => {
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(key, JSON.stringify(value));
       }
-    },
-    [key]
-  );
 
+      setStoredValue(value);
+    } catch (error) {
+      console.error(error);
+    }
+  };
   return [storedValue, setValue];
 }

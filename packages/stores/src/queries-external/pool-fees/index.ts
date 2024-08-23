@@ -1,12 +1,11 @@
-import { KVStore } from "@keplr-wallet/common";
-import { Dec, PricePretty, RatePretty } from "@keplr-wallet/unit";
 import { makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
-
+import { KVStore } from "@keplr-wallet/common";
+import { Dec, PricePretty, RatePretty } from "@keplr-wallet/unit";
 import { IPriceStore } from "../../price";
-import { ObservableQueryPool } from "../../queries-external/pools";
+import { ObservableQueryPool } from "../../queries/pools";
 import { ObservableQueryExternalBase } from "../base";
-import { PoolFees, PoolFeesMetrics } from "./types";
+import { PoolFeesMetrics, PoolFees } from "./types";
 
 /** Queries Imperator pool fee history data. */
 export class ObservableQueryPoolFeesMetrics extends ObservableQueryExternalBase<PoolFees> {
@@ -25,51 +24,47 @@ export class ObservableQueryPoolFeesMetrics extends ObservableQueryExternalBase<
         throw new Error("There is no fiat currency in priceStore");
       }
 
-      const zeroPrice = new PricePretty(fiatCurrency, new Dec(0)).ready(false);
-      const zeroMetrics = {
-        volume24h: zeroPrice,
-        volume7d: zeroPrice,
-        feesSpent24h: zeroPrice,
-        feesSpent7d: zeroPrice,
-        feesPercentage: "",
-      };
-
-      try {
-        const poolFeesMetricsRaw = this.response?.data.data.find(
-          (poolMetric) => poolMetric.pool_id === poolId
+      const poolFeesMetricsRaw = this.response?.data.data.find(
+        (poolMetric) => poolMetric.pool_id === poolId
+      );
+      if (!poolFeesMetricsRaw) {
+        const zeroPrice = new PricePretty(fiatCurrency, new Dec(0)).ready(
+          false
         );
-        if (!poolFeesMetricsRaw) {
-          return zeroMetrics;
-        }
-
-        const volume24h = new PricePretty(
-          fiatCurrency,
-          new Dec(poolFeesMetricsRaw.volume_24h)
-        );
-        const volume7d = new PricePretty(
-          fiatCurrency,
-          new Dec(poolFeesMetricsRaw.volume_7d)
-        );
-        const feesSpent24h = new PricePretty(
-          fiatCurrency,
-          new Dec(poolFeesMetricsRaw.fees_spent_24h)
-        );
-        const feesSpent7d = new PricePretty(
-          fiatCurrency,
-          new Dec(poolFeesMetricsRaw.fees_spent_7d)
-        );
-        const feesPercentage = poolFeesMetricsRaw.fees_percentage;
-
         return {
-          volume24h,
-          volume7d,
-          feesSpent24h,
-          feesSpent7d,
-          feesPercentage,
+          volume24h: zeroPrice,
+          volume7d: zeroPrice,
+          feesSpent24h: zeroPrice,
+          feesSpent7d: zeroPrice,
+          feesPercentage: "",
         };
-      } catch {
-        return zeroMetrics;
       }
+
+      const volume24h = new PricePretty(
+        fiatCurrency,
+        new Dec(poolFeesMetricsRaw.volume_24h)
+      );
+      const volume7d = new PricePretty(
+        fiatCurrency,
+        new Dec(poolFeesMetricsRaw.volume_7d)
+      );
+      const feesSpent24h = new PricePretty(
+        fiatCurrency,
+        new Dec(poolFeesMetricsRaw.fees_spent_24h)
+      );
+      const feesSpent7d = new PricePretty(
+        fiatCurrency,
+        new Dec(poolFeesMetricsRaw.fees_spent_7d)
+      );
+      const feesPercentage = poolFeesMetricsRaw.fees_percentage;
+
+      return {
+        volume24h,
+        volume7d,
+        feesSpent24h,
+        feesSpent7d,
+        feesPercentage,
+      };
     }
   );
 

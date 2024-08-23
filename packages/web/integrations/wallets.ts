@@ -1,6 +1,5 @@
 import EventEmitter, { ValidEventTypes } from "eventemitter3";
-
-import { Alert } from "~/components/alert";
+import { Alert } from "../components/alert";
 
 export type WalletKey = "metamask" | "walletconnect";
 
@@ -11,8 +10,8 @@ export type WalletDisplay = {
 
 export type GeneralTxEvent = "pending" | "confirmed" | "failed";
 
-/** Generalized non-Keplr wallet & client, made observable by MobX. */
-export interface ObservableWallet<
+/** Generalized non-Keplr wallet & client. */
+export interface Wallet<
   TTxSend = unknown,
   TSendingMsg = unknown,
   TTxEvents extends ValidEventTypes = GeneralTxEvent
@@ -38,7 +37,7 @@ export interface ObservableWallet<
 
   /** Send request to chain. Could be a query or state-changing transaction. */
   send: (send: TTxSend) => Promise<unknown>;
-  /** Display various errors resulting from send or enable function. */
+  /** Display various errors resulting from send function. */
   displayError?: (e: any) => string | Alert | undefined;
 
   readonly txStatusEventEmitter?: EventEmitter<TTxEvents, { txHash?: string }>;

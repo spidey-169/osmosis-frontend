@@ -1,16 +1,15 @@
-import { action, computed, makeObservable, observable } from "mobx";
+import { action, makeObservable, observable, computed } from "mobx";
 import { FunctionComponent } from "react";
+import { IUserSetting } from ".";
 import React from "react";
-
 import {
   LanguageSelect,
   MenuDropdownIconItemProps,
-} from "~/components/control";
-import { UserSetting } from "~/stores/user-settings";
+} from "../../components/control";
 
-export type LanguageState = { language: string; isControlOpen: boolean };
+export type LanguageState = { language: string };
 
-export const SUPPORTED_LANGUAGES: MenuDropdownIconItemProps[] = [
+const SUPPORTED_LANGUAGES: MenuDropdownIconItemProps[] = [
   {
     value: "en",
     display: "English",
@@ -32,14 +31,6 @@ export const SUPPORTED_LANGUAGES: MenuDropdownIconItemProps[] = [
     display: "Polski",
   },
   {
-    value: "pt-br",
-    display: "Portuguese",
-  },
-  {
-    value: "ro",
-    display: "Romana",
-  },
-  {
     value: "tr",
     display: "Türkçe",
   },
@@ -51,53 +42,24 @@ export const SUPPORTED_LANGUAGES: MenuDropdownIconItemProps[] = [
     value: "zh-tw",
     display: "正體中文",
   },
-  {
-    value: "zh-hk",
-    display: "香港語",
-  },
-  {
-    value: "fa",
-    display: "فارسی",
-  },
-  {
-    value: "ja",
-    display: "日本語",
-  },
-  {
-    value: "de",
-    display: "Deutsch",
-  },
-  {
-    value: "hi",
-    display: "हिन्दी",
-  },
-  {
-    value: "ru",
-    display: "Русский",
-  },
-  {
-    value: "gu",
-    display: "ગુજરાતી",
-  },
 ];
 
-export class LanguageUserSetting implements UserSetting<LanguageState> {
+export class LanguageUserSetting implements IUserSetting<LanguageState> {
   readonly id = "language";
   readonly defaultLanguage: MenuDropdownIconItemProps;
-  readonly controlComponent: FunctionComponent<LanguageState> = () => (
-    <LanguageSelect options={SUPPORTED_LANGUAGES} />
-  );
+  readonly controlComponent: FunctionComponent<LanguageState> = ({}) => {
+    return <LanguageSelect options={SUPPORTED_LANGUAGES} />;
+  };
 
   @observable
   protected _state: LanguageState;
 
   constructor(indexDefaultLanguage: number) {
+    makeObservable(this);
     this.defaultLanguage = SUPPORTED_LANGUAGES[indexDefaultLanguage];
     this._state = {
       language: this.defaultLanguage.value,
-      isControlOpen: false,
     };
-    makeObservable(this);
   }
 
   getLabel(t: Function): string {
@@ -110,7 +72,7 @@ export class LanguageUserSetting implements UserSetting<LanguageState> {
   }
 
   @action
-  setState(state: Partial<LanguageState>) {
-    this._state = { ...this._state, ...state };
+  setState(state: LanguageState) {
+    this._state = state;
   }
 }

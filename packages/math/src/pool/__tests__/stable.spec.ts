@@ -1,14 +1,13 @@
-import { Coin, Dec, DecUtils, Int } from "@keplr-wallet/unit";
-
-import { BigDec } from "../../big-dec";
-import { checkMultiplicativeErrorTolerance } from "../../rounding";
 import {
-  calcWSumSquares,
-  cfmmConstantMultiNoV,
-  solveCfmm,
-  StableSwapMath,
   StableSwapToken,
+  StableSwapMath,
+  compareDec_checkMultErrorTolerance,
+  solveCfmm,
+  cfmmConstantMultiNoV,
+  calcWSumSquares,
 } from "../stable";
+import { Coin, Dec, Int, DecUtils } from "@keplr-wallet/unit";
+import { BigDec } from "../../big-dec";
 
 describe("Test stableswap math", () => {
   describe("calcOutGivenIn", () => {
@@ -227,7 +226,7 @@ describe("Test stableswap math", () => {
       const tolerance = new Dec(1).quo(
         DecUtils.getTenExponentNInPrecisionRange(3)
       );
-      const comparison = checkMultiplicativeErrorTolerance(
+      const comparison = compareDec_checkMultErrorTolerance(
         expectedSpotPrice,
         actualSpotPrice,
         tolerance,
@@ -270,7 +269,7 @@ describe("Test stableswap math", () => {
       const tolerance = new Dec(1).quo(
         DecUtils.getTenExponentNInPrecisionRange(3)
       );
-      const comparison = checkMultiplicativeErrorTolerance(
+      const comparison = compareDec_checkMultErrorTolerance(
         expectedSpotPrice,
         actualSpotPrice,
         tolerance,

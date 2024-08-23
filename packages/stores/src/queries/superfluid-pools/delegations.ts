@@ -1,19 +1,18 @@
 import { KVStore } from "@keplr-wallet/common";
-import { Currency } from "@keplr-wallet/types";
-import { CoinPretty, Int } from "@keplr-wallet/unit";
 import {
   ChainGetter,
   ObservableChainQuery,
   ObservableChainQueryMap,
-} from "@osmosis-labs/keplr-stores";
-import { makeObservable } from "mobx";
-import { computedFn } from "mobx-utils";
-
+} from "@keplr-wallet/stores";
 import {
-  SuperfluidDelegation,
-  SuperfluidDelegationRecordsResponse,
   SuperfluidDelegationsResponse,
+  SuperfluidDelegationRecordsResponse,
+  SuperfluidDelegation,
 } from "./types";
+import { makeObservable } from "mobx";
+import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { Currency } from "@keplr-wallet/types";
+import { computedFn } from "mobx-utils";
 
 export class ObservableQuerySuperfluidDelegationsInner extends ObservableChainQuery<SuperfluidDelegationsResponse> {
   constructor(

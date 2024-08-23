@@ -1,69 +1,54 @@
-import classNames from "classnames";
 import { FunctionComponent } from "react";
+import classNames from "classnames";
+import { CustomClasses } from "../types";
+import { MenuOption } from "./types";
+import { IS_FRONTIER } from "../../config";
 
-import { MenuOption } from "~/components/control/types";
-import { Disableable } from "~/components/types";
-
-type Classes = "root" | "toggleContainer";
-
-interface Props extends Disableable {
+interface Props extends CustomClasses {
   options: MenuOption[];
   selectedOptionId: string;
   onSelect: (optionId: string) => void;
-  classes?: Partial<Record<Classes, string>>;
 }
 
 export const MenuToggle: FunctionComponent<Props> = ({
   options,
   selectedOptionId,
   onSelect,
-  disabled,
-  classes,
+  className,
 }) => (
-  <div
-    className={classNames(
-      "flex h-fit flex-shrink-0 rounded-full bg-osmoverse-825 transition-opacity",
-      {
-        "opacity-50": disabled,
-      },
-      classes?.root
-    )}
-  >
+  <div className="flex h-fit rounded-full bg-osmoverse-700">
     {options.map(({ id, display }) => (
       <label
         key={id}
         htmlFor={"menu-radio"}
         className={classNames(
-          "relative h-10 w-full cursor-pointer select-none px-4 py-2 text-center",
+          "relative h-10 px-4 py-2 select-none cursor-pointer",
           {
-            "rounded-full bg-osmoverse-700": id === selectedOptionId,
+            "bg-wosmongton-400 rounded-full": id === selectedOptionId,
+            "text-osmoverse-1000": id === selectedOptionId && IS_FRONTIER,
           },
-          classes?.toggleContainer
+          className
         )}
       >
         <input
           id="menu-radio"
           type="radio"
           className={classNames(
-            "subtitle1 absolute z-20 h-full w-full cursor-pointer appearance-none text-osmoverse-100",
-            "after:absolute after:h-full after:w-full",
+            "absolute w-full h-full appearance-none cursor-pointer z-20",
+            "after:absolute after:w-full after:h-full",
             {
-              "text-wosmongton-100": id !== selectedOptionId,
+              "text-osmoverse-300": id !== selectedOptionId,
             }
           )}
           value={id}
           radioGroup={options.reduce((ids, { id }) => ids + id, "")}
           checked={id === selectedOptionId}
           onChange={() => onSelect(id)}
-          disabled={disabled}
         ></input>
         <span
-          className={classNames(
-            "subtitle1 relative z-10 whitespace-nowrap text-osmoverse-100",
-            {
-              "text-wosmongton-100": id !== selectedOptionId,
-            }
-          )}
+          className={classNames("relative subtitle2 z-10", {
+            "text-osmoverse-300": id !== selectedOptionId,
+          })}
         >
           {display}
         </span>

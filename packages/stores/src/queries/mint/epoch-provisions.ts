@@ -1,10 +1,9 @@
-import { KVStore } from "@keplr-wallet/common";
-import { CoinPretty, Dec } from "@keplr-wallet/unit";
-import { ChainGetter, ObservableChainQuery } from "@osmosis-labs/keplr-stores";
-import { computed, makeObservable } from "mobx";
-
-import { ObservableQueryMintParmas } from "./params";
+import { ChainGetter, ObservableChainQuery } from "@keplr-wallet/stores";
 import { EpochProvisions } from "./types";
+import { KVStore } from "@keplr-wallet/common";
+import { computed, makeObservable } from "mobx";
+import { CoinPretty, Dec } from "@keplr-wallet/unit";
+import { ObservableQueryMintParmas } from "./params";
 
 export class ObservableQueryEpochProvisions extends ObservableChainQuery<EpochProvisions> {
   constructor(

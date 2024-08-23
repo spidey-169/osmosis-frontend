@@ -1,14 +1,14 @@
-FROM node:20.11.1 as build
+FROM node:18.12.1 as build
 
 WORKDIR /app
 
-COPY turbo.json lerna.json package.json tsconfig.json yarn.lock /app/
+COPY lerna.json package.json tsconfig.json yarn.lock /app/
 COPY packages /app/packages/
 
 RUN yarn
 RUN yarn build
 
-FROM node:20.11.1-alpine3.19
+FROM node:18.12.1-alpine3.15
 
 WORKDIR /app
 COPY --from=build /app .

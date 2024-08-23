@@ -1,50 +1,34 @@
-import classNames from "classnames";
-import React, { PropsWithChildren, ReactNode } from "react";
+import Image from "next/image";
+import React, { FunctionComponent, ReactElement } from "react";
 import ReactModal, { setAppElement } from "react-modal";
-import { useUnmount } from "react-use";
+import classNames from "classnames";
+import { useWindowSize } from "../hooks";
 
-import { Icon } from "~/components/assets";
-import { IconButton } from "~/components/ui/button";
-import { SpriteIconId } from "~/config";
-import { useFeatureFlags } from "~/hooks";
-import { useWindowSize } from "~/hooks/window/use-window-size";
-
-if (setAppElement) {
-  setAppElement("body");
-}
+setAppElement("body");
 
 export interface ModalBaseProps {
   isOpen: boolean;
   onRequestClose: () => void;
   onRequestBack?: () => void;
-  onAfterClose?: () => void;
-  backIcon?: SpriteIconId;
-  title?: string | ReactNode;
+  title?: string | ReactElement;
   className?: string;
   bodyOpenClassName?: string;
   overlayClassName?: string;
   hideCloseButton?: boolean;
 }
 
-export const ModalBase = ({
+export const ModalBase: FunctionComponent<ModalBaseProps> = ({
   isOpen,
   onRequestClose,
   onRequestBack,
-  onAfterClose,
-  backIcon,
   title,
   className,
   bodyOpenClassName,
   overlayClassName,
   hideCloseButton,
   children,
-}: PropsWithChildren<ModalBaseProps>) => {
+}) => {
   const { isMobile } = useWindowSize();
-  const featureFlags = useFeatureFlags();
-  const bodyOpenClassNames = classNames("overflow-hidden", bodyOpenClassName);
-  useUnmount(() => {
-    document.body.classList.remove(bodyOpenClassNames);
-  });
 
   return (
     <ReactModal
@@ -55,30 +39,28 @@ export const ModalBase = ({
       }}
       bodyOpenClassName={classNames("overflow-hidden", bodyOpenClassName)}
       overlayClassName={classNames(
-        "fixed flex overflow-auto items-center inset-0 justify-center bg-osmoverse-1000/90 z-[9999]",
+        "fixed flex items-center inset-0 justify-center bg-osmoverse-1000/90 z-[9999]",
         overlayClassName
       )}
       className={classNames(
-        "absolute mx-10 my-8 flex max-h-[95vh] w-full max-w-modal flex-col overflow-auto rounded-3xl p-8 outline-none sm:max-h-full sm:w-full sm:px-4",
-        className,
-        {
-          "bg-osmoverse-800": !featureFlags.limitOrders,
-          "bg-osmoverse-850": featureFlags.limitOrders,
-        }
+        "absolute outline-none md:w-[98%] w-full p-8 md:px-4 bg-osmoverse-800 rounded-2xl flex flex-col max-w-modal",
+        className
       )}
-      closeTimeoutMS={150}
-      onAfterClose={onAfterClose}
     >
-      <div className="flex place-content-between items-center">
+      <div className="flex items-center place-content-between">
         {onRequestBack && (
-          <IconButton
-            aria-label="Back"
-            className="top-9.5 absolute left-8 z-50 w-fit cursor-pointer py-0 text-osmoverse-400 md:left-7 md:top-7"
-            icon={
-              <Icon id={backIcon ?? "chevron-left"} width={18} height={18} />
-            }
+          <button
+            aria-label="back"
+            className="absolute md:top-7 md:left-7 top-8 left-8 cursor-pointer z-50"
             onClick={onRequestBack}
-          />
+          >
+            <Image
+              alt="back button"
+              src="/icons/left.svg"
+              height={32}
+              width={32}
+            />
+          </button>
         )}
         {typeof title === "string" ? (
           <div className="relative mx-auto">
@@ -87,27 +69,22 @@ export const ModalBase = ({
         ) : (
           <>{title}</>
         )}
-        {!hideCloseButton && <ModalCloseButton onClick={onRequestClose} />}
+        {!hideCloseButton && (
+          <button
+            aria-label="close"
+            className="absolute md:top-7 md:right-7 top-8 right-8 cursor-pointer z-50"
+            onClick={onRequestClose}
+          >
+            <Image
+              src={"/icons/close-dark.svg"}
+              alt="close icon"
+              width={32}
+              height={32}
+            />
+          </button>
+        )}
       </div>
       {children}
     </ReactModal>
   );
 };
-
-export const ModalCloseButton = ({
-  onClick,
-  className,
-}: {
-  onClick: () => void;
-  className?: string;
-}) => (
-  <IconButton
-    aria-label="Close"
-    className={classNames(
-      "absolute right-8 top-[24px] z-50 !h-12 !w-12 cursor-pointer !py-0 text-wosmongton-200 hover:text-osmoverse-100 md:right-7 md:top-7 md:!h-8 md:!w-8 xs:right-4",
-      className
-    )}
-    icon={<Icon id="close" className="md:h-4 md:w-4" />}
-    onClick={onClick}
-  />
-);

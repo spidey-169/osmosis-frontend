@@ -1,22 +1,21 @@
 import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter, ObservableChainQuery } from "@keplr-wallet/stores";
 import { FiatCurrency } from "@keplr-wallet/types";
 import { CoinPretty, Dec, Int, RatePretty } from "@keplr-wallet/unit";
-import { ChainGetter, ObservableChainQuery } from "@osmosis-labs/keplr-stores";
 import dayjs from "dayjs";
 import { Duration } from "dayjs/plugin/duration";
 import { computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
-
-import { IPriceStore } from "../../price";
-import { ObservableQueryPoolGetter } from "../../queries-external/pools";
 import { ObservableQueryEpochs } from "../epochs";
-import { ObservableQueryGauges } from "../incentives";
 import {
   ObservableQueryEpochProvisions,
   ObservableQueryMintParmas,
 } from "../mint";
+import { ObservableQueryPools } from "../pools";
+import { IPriceStore } from "../../price";
 import { ObservableQueryDistrInfo } from "./distr-info";
 import { ObservableQueryLockableDurations } from "./lockable-durations";
+import { ObservableQueryGuage } from "../incentives";
 import { IncentivizedPools } from "./types";
 
 export class ObservableQueryIncentivizedPools extends ObservableChainQuery<IncentivizedPools> {
@@ -26,11 +25,11 @@ export class ObservableQueryIncentivizedPools extends ObservableChainQuery<Incen
     chainGetter: ChainGetter,
     protected readonly queryLockableDurations: ObservableQueryLockableDurations,
     protected readonly queryDistrInfo: ObservableQueryDistrInfo,
-    protected readonly queryPools: ObservableQueryPoolGetter,
+    protected readonly queryPools: ObservableQueryPools,
     protected readonly queryMintParmas: ObservableQueryMintParmas,
     protected readonly queryEpochProvision: ObservableQueryEpochProvisions,
     protected readonly queryEpochs: ObservableQueryEpochs,
-    protected readonly queryGauge: ObservableQueryGauges
+    protected readonly queryGauge: ObservableQueryGuage
   ) {
     super(
       kvStore,
@@ -60,16 +59,6 @@ export class ObservableQueryIncentivizedPools extends ObservableChainQuery<Incen
   /** Is incentivized internally. */
   readonly isIncentivized = computedFn((poolId: string) => {
     return this.incentivizedPools.includes(poolId);
-  });
-
-  readonly isGaugeIdInternalIncentive = computedFn((gaugeId: string) => {
-    if (!this.response) {
-      return false;
-    }
-
-    return this.response.data.incentivized_pools.some(
-      (incentivizedPool) => incentivizedPool.gauge_id === gaugeId
-    );
   });
 
   /** Internal incentives (OSMO). */
@@ -107,7 +96,6 @@ export class ObservableQueryIncentivizedPools extends ObservableChainQuery<Incen
         return new RatePretty(new Dec(0));
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const fiatCurrency = priceStore.getFiatCurrency(
         priceStore.defaultVsCurrency
       )!;
@@ -159,15 +147,11 @@ export class ObservableQueryIncentivizedPools extends ObservableChainQuery<Incen
         return new RatePretty(new Dec(0));
       }
 
-      const rewardAmount = observableGauge.coins.find(
-        (coin) =>
-          coin.remaining.currency.coinMinimalDenom ===
-          mintCurrency.coinMinimalDenom
-      )?.remaining;
+      const rewardAmount = observableGauge.getRemainingCoin(mintCurrency);
 
       const pool = this.queryPools.getPool(poolId);
 
-      if (!pool || !rewardAmount) {
+      if (!pool) {
         return new RatePretty(new Dec(0));
       }
 
@@ -459,12 +443,15 @@ export class ObservableQueryIncentivizedPools extends ObservableChainQuery<Incen
 
   @computed
   get isAprFetching(): boolean {
-    return (
-      this.queryPools.isFetching ||
+    if (
+      (!this.queryPools.response && !this.queryPools.error) ||
       (!this.queryMintParmas.response && !this.queryPools.error) ||
       (!this.queryEpochs.response && !this.queryEpochs.error) ||
       (!this.queryDistrInfo.response && !this.queryDistrInfo.error) ||
       (!this.queryEpochProvision.response && !this.queryEpochProvision.error)
-    );
+    ) {
+      return true;
+    }
+    return false;
   }
 }

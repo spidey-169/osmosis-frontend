@@ -1,6 +1,6 @@
 {
   "name": "@osmosis-labs/pools",
-  "version": "5.1.0",
+  "version": "4.0.0",
   "main": "build/index.js",
   "author": "osmosis-labs",
   "homepage": "https://github.com/osmosis-labs/osmosis-frontend/tree/master/packages/pools#readme",
@@ -21,7 +21,7 @@
     "access": "public"
   },
   "scripts": {
-    "clean": "rm -rf node_modules; rm -rf build; rm -f tsconfig.tsbuildinfo",
+    "clean": "rm -rf node_modules; rm -rf build",
     "build": "tsc",
     "dev": "tsc -w",
     "test": "jest --passWithNoTests",
@@ -37,9 +37,8 @@
     ]
   },
   "dependencies": {
-    "@keplr-wallet/unit": "0.10.24-ibc.go.v7.hot.fix",
-    "@osmosis-labs/math": "^5.1.0",
-    "@osmosis-labs/types": "^1.0.0"
+    "@keplr-wallet/unit": "^0.10.24",
+    "@osmosis-labs/math": "^4.0.0"
   },
   "devDependencies": {
     "deepmerge": ""

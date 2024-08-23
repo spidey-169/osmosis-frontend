@@ -1,17 +1,11 @@
-import { NextPage } from "next";
 import Image from "next/image";
-import { NextSeo } from "next-seo";
-
-import { useTranslation } from "~/hooks";
+import { NextPage } from "next";
+import { useTranslation } from "react-multi-lang";
 
 const Custom404: NextPage = () => {
-  const { t } = useTranslation();
+  const t = useTranslation();
   return (
-    <div className="flex h-screen items-center justify-center gap-3 bg-osmoverse-900">
-      <NextSeo
-        title={t("seo.404.title")}
-        description={t("seo.404.description")}
-      />
+    <div className="bg-osmoverse-900 flex gap-3 justify-center items-center h-screen">
       <Image
         src="/icons/warning.svg"
         alt={t("404.title")}

@@ -1,13 +1,12 @@
-import classNames from "classnames";
+import Image from "next/image";
 import React, { FunctionComponent } from "react";
-
-import { Icon } from "~/components/assets";
-import { MenuDropdown } from "~/components/control";
-import { MenuSelectProps } from "~/components/control/types";
-import { CustomClasses, Disableable } from "~/components/types";
-import { useTranslation } from "~/hooks";
-import { useBooleanWithWindowEvent, useWindowSize } from "~/hooks";
-import { MenuOptionsModal } from "~/modals";
+import classNames from "classnames";
+import { MenuDropdown } from ".";
+import { Disableable, CustomClasses } from "../types";
+import { MenuSelectProps } from "./types";
+import { useBooleanWithWindowEvent, useWindowSize } from "../../hooks";
+import { MenuOptionsModal } from "../../modals";
+import { useTranslation } from "react-multi-lang";
 
 interface Props extends MenuSelectProps, Disableable, CustomClasses {
   onToggleSortDirection?: () => void;
@@ -23,7 +22,7 @@ export const SortMenu: FunctionComponent<Props> = ({
 }) => {
   const [dropdownOpen, setDropdownOpen] = useBooleanWithWindowEvent(false);
   const { isMobile } = useWindowSize();
-  const { t } = useTranslation();
+  const t = useTranslation();
 
   const selectedOption = options.find(
     (option) => option.id === selectedOptionId
@@ -32,10 +31,10 @@ export const SortMenu: FunctionComponent<Props> = ({
   return (
     <div
       className={classNames(
-        "relative flex h-10 shrink-0 cursor-pointer items-center justify-center px-6 transition-colors",
+        "relative shrink-0 px-6 py-2 cursor-pointer transition-colors",
         dropdownOpen
-          ? "rounded-t-xl border-x border-t border-osmoverse-600"
-          : "rounded-xl border border-osmoverse-500 hover:border-2 hover:border-osmoverse-200 hover:px-[23px]"
+          ? "rounded-t-xl border-t border-x border-osmoverse-600"
+          : "border rounded-xl border-osmoverse-500"
       )}
       onClick={() => {
         if (!disabled) {
@@ -47,13 +46,13 @@ export const SortMenu: FunctionComponent<Props> = ({
         className={classNames(
           "flex w-fit",
           {
-            "cursor-default opacity-50": disabled,
+            "opacity-50 cursor-default": disabled,
           },
           className
         )}
       >
         <button
-          className="flex shrink-0 items-center text-osmoverse-200"
+          className="flex items-center shrink-0"
           onClick={(e) => {
             e.stopPropagation();
             if (!disabled) {
@@ -65,10 +64,11 @@ export const SortMenu: FunctionComponent<Props> = ({
             }
           }}
         >
-          <Icon
-            id="up-down-arrow"
-            height={isMobile ? 12 : 16}
-            width={isMobile ? 12 : 16}
+          <Image
+            alt="sort"
+            src="/icons/up-down-arrow.svg"
+            height={isMobile ? 12 : 18}
+            width={isMobile ? 12 : 18}
           />
         </button>
         <button
@@ -80,7 +80,7 @@ export const SortMenu: FunctionComponent<Props> = ({
             }
           }}
         >
-          <span className="body2 m-auto ml-2 block select-none overflow-hidden text-center leading-loose text-osmoverse-200">
+          <span className="block m-auto ml-2 leading-loose text-osmoverse-200 min-w-[3.75rem] select-none text-center body2 md:caption overflow-hidden">
             {isMobile
               ? t("components.sort.SORTMobile")
               : t("components.sort.SORT")}
@@ -98,7 +98,7 @@ export const SortMenu: FunctionComponent<Props> = ({
         />
       ) : (
         <MenuDropdown
-          className="-left-px top-full w-[calc(100%_+_2px)]"
+          className="w-[calc(100%_+_2px)] top-full -left-px"
           options={options}
           selectedOptionId={selectedOptionId}
           onSelect={onSelect}

@@ -113,20 +113,4 @@ export class InsufficientBalanceError extends Error {
   }
 }
 
-export class InsufficientBalanceForFeeError extends Error {
-  constructor(m: string) {
-    super(m);
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, InsufficientBalanceForFeeError.prototype);
-  }
-}
-
-export class SwapRequiresError extends Error {
-  constructor(m: string) {
-    super(m);
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, SwapRequiresError.prototype);
-  }
-}
-
 export * from "./manage-liquidity/errors";

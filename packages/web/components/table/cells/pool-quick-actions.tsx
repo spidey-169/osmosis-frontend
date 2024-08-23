@@ -1,17 +1,16 @@
-import EventEmitter from "eventemitter3";
+import Image from "next/image";
 import React, {
   FunctionComponent,
   useCallback,
   useEffect,
   useMemo,
 } from "react";
-
-import { MenuDropdown, MenuOption } from "~/components//control";
-import { Icon } from "~/components/assets";
-import { BaseCell } from "~/components/table";
-import { PoolCompositionCell } from "~/components/table/cells/pool-composition";
-import { useTranslation } from "~/hooks";
-import { useBooleanWithWindowEvent } from "~/hooks";
+import EventEmitter from "eventemitter3";
+import { useBooleanWithWindowEvent } from "../../../hooks";
+import { MenuDropdown, MenuOption } from "../../control";
+import { BaseCell } from "..";
+import { PoolCompositionCell } from "./pool-composition";
+import { useTranslation } from "react-multi-lang";
 
 export interface PoolQuickActionCell
   extends BaseCell,
@@ -37,7 +36,7 @@ export const PoolQuickActionCell: FunctionComponent<
   onLockTokens,
 }) => {
   const [dropdownOpen, setDropdownOpen] = useBooleanWithWindowEvent(false);
-  const { t } = useTranslation();
+  const t = useTranslation();
 
   const menuOptions = useMemo(() => {
     const m: MenuOption[] = [];
@@ -65,7 +64,7 @@ export const PoolQuickActionCell: FunctionComponent<
   }, [onAddLiquidity, onRemoveLiquidity, onLockTokens, t]);
 
   const doAction = useCallback(
-    (optionId: string) => {
+    (optionId) => {
       setDropdownOpen(false);
 
       switch (optionId) {
@@ -80,7 +79,7 @@ export const PoolQuickActionCell: FunctionComponent<
           break;
       }
     },
-    [onAddLiquidity, onRemoveLiquidity, onLockTokens, setDropdownOpen]
+    [poolId, onAddLiquidity, onRemoveLiquidity, onLockTokens, setDropdownOpen]
   );
 
   useEffect(() => {
@@ -96,7 +95,7 @@ export const PoolQuickActionCell: FunctionComponent<
         cellGroupEventEmitter.removeListener("select-pool-id", onPoolSelected);
       };
     }
-  }, [cellGroupEventEmitter, poolId, setDropdownOpen]);
+  }, [poolId]);
 
   return (
     <div
@@ -108,14 +107,14 @@ export const PoolQuickActionCell: FunctionComponent<
       }}
     >
       <div
-        className="hover:pointer-cursor relative"
+        className="absolute hover:pointer-cursor"
         onClick={(e) => {
           e.preventDefault();
         }}
       >
-        <Icon id="more-menu" className="h-6 w-6" />
+        <Image alt="menu" src="/icons/more-menu.svg" width={24} height={24} />
         <MenuDropdown
-          className="right-0 top-full w-44"
+          className="w-44 top-full right-0"
           isOpen={dropdownOpen}
           options={menuOptions}
           onSelect={(id) => doAction(id)}

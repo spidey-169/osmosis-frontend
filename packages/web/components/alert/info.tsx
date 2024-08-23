@@ -1,8 +1,7 @@
-import classNames from "classnames";
 import { FunctionComponent } from "react";
-
-import { Alert } from "~/components/alert/types";
-import { CustomClasses, MobileProps } from "~/components/types";
+import classNames from "classnames";
+import { CustomClasses, MobileProps } from "../types";
+import { Alert } from "./types";
 
 export const Info: FunctionComponent<
   { size?: "large" | "subtle" } & Alert & {
@@ -13,26 +12,24 @@ export const Info: FunctionComponent<
     MobileProps
 > = ({
   size = "large",
-  titleTranslationKey: message,
-  captionTranslationKey: caption,
+  message,
+  caption,
   data,
   borderClassName,
   textClassName,
   className,
   isMobile = false,
 }) =>
-  size === "subtle" &&
-  typeof message === "string" &&
-  typeof caption === "string" ? (
+  size === "subtle" ? (
     <div
       className={classNames(
-        "w-full rounded-lg border border-rust-500 p-2",
+        "w-full p-2 rounded-lg border border-rust-500",
         className
       )}
     >
       <span
         className={classNames(
-          "subtitle1 md:caption text-wosmongton-100",
+          "subtitle1 text-wosmongton-100 md:caption",
           textClassName
         )}
       >
@@ -42,13 +39,13 @@ export const Info: FunctionComponent<
   ) : (
     <div
       className={classNames(
-        "flex w-full gap-3 rounded-2xl bg-gradient-neutral p-px md:gap-1.5",
+        "flex gap-3 md:gap-1.5 w-full rounded-2xl bg-gradient-neutral p-px",
         borderClassName
       )}
     >
       <div
         className={classNames(
-          "flex grow place-content-between rounded-2xlinset bg-osmoverse-800 px-3 py-2 md:gap-1 md:p-2",
+          "flex grow place-content-between md:gap-1 px-3 py-2 md:p-2 bg-osmoverse-800 rounded-2xlinset",
           {
             "items-center": !data,
           },
@@ -66,10 +63,10 @@ export const Info: FunctionComponent<
               {message}
             </span>
           )}
-          {caption && typeof caption === "string" && (
+          {caption && (
             <span
               className={classNames(
-                "body2 md:caption text-wosmongton-100",
+                "text-wosmongton-100 body2 md:caption",
                 textClassName
               )}
             >

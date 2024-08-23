@@ -1,18 +1,17 @@
-import { KVStore } from "@keplr-wallet/common";
-import { AppCurrency } from "@keplr-wallet/types";
-import { CoinPretty, Dec } from "@keplr-wallet/unit";
 import {
   ChainGetter,
   ObservableChainQuery,
   ObservableChainQueryMap,
   QueryResponse,
-} from "@osmosis-labs/keplr-stores";
-import dayjs from "dayjs";
-import { Duration } from "dayjs/plugin/duration";
+} from "@keplr-wallet/stores";
+import { KVStore } from "@keplr-wallet/common";
+import { AccountLockedLongerDuration } from "./types";
 import { computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
-
-import { AccountLockedLongerDuration } from "./types";
+import dayjs from "dayjs";
+import { Duration } from "dayjs/plugin/duration";
+import { CoinPretty, Dec } from "@keplr-wallet/unit";
+import { AppCurrency } from "@keplr-wallet/types";
 
 export class ObservableQueryAccountLockedInner extends ObservableChainQuery<AccountLockedLongerDuration> {
   constructor(
@@ -52,12 +51,11 @@ export class ObservableQueryAccountLockedInner extends ObservableChainQuery<Acco
     chainInfo.addUnknownCurrencies(...[...new Set(unknownCurrencies)]);
   }
 
-  /** Locked coins aggregated by coin denoms. */
-  @computed
+  /** Locked coins aggregated by duration. */
   get lockedCoins(): {
-    duration: Duration;
     amount: CoinPretty;
     lockIds: string[];
+    duration: Duration;
   }[] {
     if (!this.response) {
       return [];
@@ -65,15 +63,12 @@ export class ObservableQueryAccountLockedInner extends ObservableChainQuery<Acco
 
     const matchedLocks = this.response.data.locks.filter((lock) => {
       // Locked tokens have 0 datetime
-      return (
-        new Date(lock.end_time).getFullYear() === 0 ||
-        new Date(lock.end_time).getFullYear() === 1
-      );
+      return new Date(lock.end_time).getFullYear() === 0;
     });
 
-    const coinDenomMap: Map<
-      // key: <coin denom>/<duration seconds>
-      string,
+    const map: Map<
+      // key: duration in milliseconds
+      number,
       {
         amount: CoinPretty;
         lockIds: string[];
@@ -84,38 +79,38 @@ export class ObservableQueryAccountLockedInner extends ObservableChainQuery<Acco
     for (const lock of matchedLocks) {
       const seconds = parseInt(lock.duration.slice(0, -1));
       const curDuration = dayjs.duration({ seconds });
+      const curDurationMs = curDuration.asMilliseconds();
 
-      for (const { denom, amount } of lock.coins) {
-        const key = `${denom}/${seconds}`;
+      for (const coin of lock.coins) {
         const currency = this.chainGetter
           .getChain(this.chainId)
-          .findCurrency(denom);
+          .findCurrency(coin.denom);
 
         if (currency) {
-          if (!coinDenomMap.has(key)) {
-            coinDenomMap.set(key, {
+          if (!map.has(curDurationMs)) {
+            map.set(curDurationMs, {
               amount: new CoinPretty(currency, new Dec(0)),
               lockIds: [],
               duration: curDuration,
             });
           }
 
-          const curDenomValue = coinDenomMap.get(key);
+          const curDurationValue = map.get(curDurationMs);
 
-          // aggregate any locks with the same denom and duration
-          if (curDenomValue) {
-            curDenomValue.amount = curDenomValue.amount.add(
-              new CoinPretty(currency, new Dec(amount))
+          // aggregate amount for current duration
+          if (curDurationValue) {
+            curDurationValue.amount = curDurationValue.amount.add(
+              new CoinPretty(currency, new Dec(coin.amount))
             );
-            curDenomValue.lockIds.push(lock.ID);
+            curDurationValue.lockIds.push(lock.ID);
 
-            coinDenomMap.set(key, curDenomValue);
+            map.set(curDurationMs, curDurationValue);
           }
         }
       }
     }
 
-    return [...coinDenomMap.values()].sort((v1, v2) => {
+    return [...map.values()].sort((v1, v2) => {
       return v1.duration.asMilliseconds() > v2.duration.asMilliseconds()
         ? 1
         : -1;
@@ -174,7 +169,6 @@ export class ObservableQueryAccountLockedInner extends ObservableChainQuery<Acco
             });
           }
 
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           const value = map.get(key)!;
           value.amount = value.amount.add(
             new CoinPretty(currency, new Dec(coin.amount))
@@ -228,11 +222,7 @@ export class ObservableQueryAccountLockedInner extends ObservableChainQuery<Acco
               (coin) => coin.denom === currency.coinMinimalDenom
             ) != null
           );
-        })
-        .filter(
-          (lock) =>
-            Number(lock.duration.replace("s", "")) === duration.asSeconds()
-        );
+        });
 
       let coin = new CoinPretty(currency, new Dec(0));
       for (const lock of matchedLocks) {
@@ -278,11 +268,7 @@ export class ObservableQueryAccountLockedInner extends ObservableChainQuery<Acco
         .filter((lock) => {
           // Filter the locked.
           return new Date(lock.end_time).getTime() > 0;
-        })
-        .filter(
-          (lock) =>
-            Number(lock.duration.replace("s", "")) === duration.asSeconds()
-        );
+        });
 
       // End time 별로 구분하기 위한 map. key는 end time의 getTime()의 결과이다.
       const map: Map<
@@ -310,7 +296,6 @@ export class ObservableQueryAccountLockedInner extends ObservableChainQuery<Acco
               });
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             const value = map.get(
               time.toString() + "/" + currency.coinMinimalDenom
             )!;
@@ -390,7 +375,6 @@ export class ObservableQueryAccountLockedInner extends ObservableChainQuery<Acco
             });
           }
 
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           const value = map.get(time)!;
           value.amount = value.amount.add(
             new CoinPretty(currency, new Dec(matchedCoin.amount))
@@ -407,14 +391,6 @@ export class ObservableQueryAccountLockedInner extends ObservableChainQuery<Acco
       });
     }
   );
-
-  readonly getPeriodLockById = computedFn((lockId) => {
-    if (!this.response) {
-      return undefined;
-    }
-
-    return this.response.data.locks.find((lock) => lock.ID === lockId);
-  });
 }
 
 export class ObservableQueryAccountLocked extends ObservableChainQueryMap<AccountLockedLongerDuration> {

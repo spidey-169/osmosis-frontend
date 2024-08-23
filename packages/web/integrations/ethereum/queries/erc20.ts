@@ -1,18 +1,17 @@
+import { hexToNumberString, isAddress } from "web3-utils";
 import { Int } from "@keplr-wallet/unit";
-import { hexToNumberString, hexToString, isAddress } from "web3-utils";
-
-import { SendFn } from "~/integrations/ethereum//types";
-import { Erc20Abi } from "~/integrations/ethereum/queries/types";
+import { SendFn } from "../types";
+import { Erc20Abi } from "./types";
 
 export function queryErc20Balance(
   queryFn: SendFn,
   erc20Address: string,
   accountAddress: string
-): Promise<{ amount: Int; symbol: string; decimals: number }> {
+): Promise<Int> {
   return new Promise(async (resolve, reject) => {
     if (isAddress(accountAddress)) {
       try {
-        const amountPromise = queryFn({
+        const res = (await queryFn({
           method: "eth_call",
           params: [
             {
@@ -21,40 +20,8 @@ export function queryErc20Balance(
             },
             "latest",
           ],
-        }) as Promise<string>;
-        const symbolPromise = queryFn({
-          method: "eth_call",
-          params: [
-            {
-              to: erc20Address,
-              data: Erc20Abi.encodeFunctionData("symbol", []),
-            },
-            "latest",
-          ],
-        }) as Promise<string>;
-        const decimalsPromise = queryFn({
-          method: "eth_call",
-          params: [
-            {
-              to: erc20Address,
-              data: Erc20Abi.encodeFunctionData("decimals", []),
-            },
-            "latest",
-          ],
-        }) as Promise<string>;
-        const [amount, symbol, decimals] = await Promise.all([
-          amountPromise,
-          symbolPromise,
-          decimalsPromise,
-        ]);
-
-        resolve({
-          amount: new Int(hexToNumberString(amount)),
-          symbol: hexToString(symbol)
-            .trim()
-            .replace(/[^\w\-]+/g, ""), // Remove any special character
-          decimals: Number(hexToNumberString(decimals)),
-        });
+        })) as string;
+        resolve(new Int(hexToNumberString(res)));
       } catch (e) {
         reject(`queryErc20Balance: query failed: ${e}`);
       }

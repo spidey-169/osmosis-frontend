@@ -1,35 +1,36 @@
+import { observable, makeObservable, computed, action } from "mobx";
 import {
+  ObservableQueryBalances,
+  ChainGetter,
+  IQueriesStore,
+} from "@keplr-wallet/stores";
+import {
+  IntPretty,
   CoinPretty,
   Dec,
   DecUtils,
   Int,
-  IntPretty,
   RatePretty,
 } from "@keplr-wallet/unit";
-import { AmountConfig } from "@osmosis-labs/keplr-hooks";
+import { Currency } from "@keplr-wallet/types";
+import { AmountConfig } from "@keplr-wallet/hooks";
 import {
-  ChainGetter,
-  IQueriesStore,
-  ObservableQueryBalances,
-} from "@osmosis-labs/keplr-stores";
-import type { Currency } from "@osmosis-labs/types";
-import { action, computed, makeObservable, observable } from "mobx";
-
-import { ObservableQueryPoolShare } from "../../queries";
-import { ObservableQueryPoolGetter } from "../../queries-external/pools";
-import { OSMO_MEDIUM_TX_FEE } from ".";
+  ObservableQueryPools,
+  ObservableQueryGammPoolShare,
+} from "../../queries";
 import { ManageLiquidityConfigBase } from "./base";
-import { CalculatingShareOutAmountError, NotInitializedError } from "./errors";
+import { NotInitializedError, CalculatingShareOutAmountError } from "./errors";
+import { OSMO_MEDIUM_TX_FEE } from ".";
 
 /** Use to config user input UI for eventually sending a valid add liquidity msg.
- *  Supports specifying a single asset LP amount, or evenly adding liquidity from an arbitrary number of pool assets.
+ *  Supports specifying a single asset LP amount, or evenly adding liquidity from an aribtrary number of pool assets.
  */
 export class ObservableAddLiquidityConfig extends ManageLiquidityConfigBase {
   @observable.ref
   protected _queryBalances: ObservableQueryBalances;
 
   @observable.ref
-  protected _queryPools: ObservableQueryPoolGetter;
+  protected _queryPools: ObservableQueryPools;
 
   @observable.ref
   protected _shareOutAmount: IntPretty | undefined = undefined;
@@ -55,8 +56,8 @@ export class ObservableAddLiquidityConfig extends ManageLiquidityConfigBase {
     poolId: string,
     sender: string,
     queriesStore: IQueriesStore,
-    queryPoolShare: ObservableQueryPoolShare,
-    queryPools: ObservableQueryPoolGetter,
+    queryPoolShare: ObservableQueryGammPoolShare,
+    queryPools: ObservableQueryPools,
     queryBalances: ObservableQueryBalances
   ) {
     super(
@@ -74,10 +75,6 @@ export class ObservableAddLiquidityConfig extends ManageLiquidityConfigBase {
     this._sender = sender;
 
     makeObservable(this);
-  }
-
-  get stableSwapInfo() {
-    return this._queryPools.getPool(this._poolId)?.stableSwapInfo;
   }
 
   get isSingleAmountIn(): boolean {

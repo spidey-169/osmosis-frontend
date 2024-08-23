@@ -1,39 +1,102 @@
-import type {
-  TransferFailureReason,
-  TransferStatus,
-} from "@osmosis-labs/bridge";
-import { truncate } from "@osmosis-labs/utils";
-import classNames from "classnames";
-import { observer } from "mobx-react-lite";
 import Image from "next/image";
+import classNames from "classnames";
 import { FunctionComponent } from "react";
-
-import { Icon } from "~/components/assets";
-import { BaseCell, Table } from "~/components/table";
-import { CustomClasses } from "~/components/types";
-import { Breakpoint, useTranslation, useWindowSize } from "~/hooks";
-import { useStore } from "~/stores";
-
+import { observer } from "mobx-react-lite";
+import { ChainIdHelper } from "@keplr-wallet/cosmos";
+import { CoinPretty } from "@keplr-wallet/unit";
 import {
-  RecentTransfer,
-  useRecentTransfers,
-} from "../transactions/use-recent-transfers";
+  IBCTransferHistory,
+  IBCTransferHistoryStatus,
+} from "@osmosis-labs/stores";
+import { useStore } from "../../stores";
+import { Table, BaseCell } from ".";
+import { Breakpoint, CustomClasses } from "../types";
+import { truncateString } from "../utils";
+import { useWindowSize } from "../../hooks";
+import { useTranslation } from "react-multi-lang";
+
+type History = {
+  txHash: string;
+  createdAtMs: number;
+  explorerUrl: string;
+  amount: string;
+  reason?: string;
+  status: IBCTransferHistoryStatus | "failed";
+  isWithdraw: boolean;
+};
 
 export const TransferHistoryTable: FunctionComponent<CustomClasses> = observer(
   ({ className }) => {
-    const { accountStore } = useStore();
-    const { t } = useTranslation();
-    const address =
-      accountStore.getWallet(accountStore.osmosisChainId)?.address ?? "";
+    const {
+      chainStore,
+      nonIbcBridgeHistoryStore,
+      ibcTransferHistoryStore,
+      accountStore,
+    } = useStore();
+    const t = useTranslation();
+    const { chainId } = chainStore.osmosis;
+    const { bech32Address } = accountStore.getAccount(chainId);
 
-    const histories = useRecentTransfers(address);
+    const histories: History[] = nonIbcBridgeHistoryStore
+      .getHistoriesByAccount(bech32Address)
+      .map(
+        ({
+          key,
+          explorerUrl,
+          createdAt,
+          amount,
+          status,
+          reason,
+          isWithdraw,
+        }) => ({
+          txHash: key,
+          createdAtMs: createdAt.getTime(),
+          explorerUrl,
+          amount,
+          reason,
+          status: (status === "success" ? "complete" : status) as
+            | IBCTransferHistoryStatus
+            | "failed",
+          isWithdraw,
+        })
+      )
+      .concat(
+        ibcTransferHistoryStore
+          .getHistoriesAndUncommitedHistoriesByAccount(bech32Address)
+          .map((history) => {
+            const { txHash, createdAt, amount, sourceChainId, destChainId } =
+              history;
+            const status =
+              typeof (history as IBCTransferHistory).status !== "undefined"
+                ? (history as IBCTransferHistory).status
+                : ("pending" as IBCTransferHistoryStatus);
+            return {
+              txHash,
+              createdAtMs: new Date(createdAt).getTime(),
+              explorerUrl: chainStore
+                .getChain(sourceChainId)
+                .raw.explorerUrlToTx.replace("{txHash}", txHash.toUpperCase()),
+              amount: new CoinPretty(amount.currency, amount.amount)
+                .moveDecimalPointRight(amount.currency.coinDecimals)
+                .maxDecimals(6)
+                .trim(true)
+                .toString(),
+              reason: undefined,
+              status,
+              isWithdraw:
+                ChainIdHelper.parse(chainId).identifier !==
+                ChainIdHelper.parse(destChainId).identifier,
+            };
+          })
+      )
+      .sort((a, b) => b.createdAtMs - a.createdAtMs); // descending by most recent
 
     return histories.length > 0 ? (
       <>
-        <div className="mt-8 text-h5 font-h5 md:text-h6 md:font-h6">
+        <div className="text-h5 font-h5 md:text-h6 md:font-h6 mt-8">
           {t("assets.historyTable.title")}
         </div>
-        <Table<BaseCell & RecentTransfer>
+        <Table<BaseCell & History>
           className={classNames("w-full", className)}
           headerTrClassName="!h-12 body2 md:caption"
           tBodyClassName="body2 md:caption"
@@ -43,17 +106,11 @@ export const TransferHistoryTable: FunctionComponent<CustomClasses> = observer(
               className: "md:!pl-2",
               displayCell: TxHashDisplayCell,
             },
-            {
-              display: t("assets.historyTable.colums.type"),
-              className: "text-left",
-            },
-            {
-              display: t("assets.historyTable.colums.amount"),
-              className: "text-left",
-            },
+            { display: t("assets.historyTable.colums.type") },
+            { display: t("assets.historyTable.colums.amount") },
             {
               display: t("assets.historyTable.colums.status"),
-              collapseAt: Breakpoint.sm,
+              collapseAt: Breakpoint.SM,
               className: "md:!pr-2",
               displayCell: StatusDisplayCell,
             },
@@ -90,12 +147,12 @@ const TxHashDisplayCell: FunctionComponent<
       target="_blank"
       rel="noopener noreferrer"
     >
-      {truncate(value, isMobile ? 4 : 8)}{" "}
-      <Icon
-        aria-label="external link"
-        id="external-link"
-        height={12}
+      {truncateString(value, isMobile ? 4 : 8)}{" "}
+      <Image
+        alt="external link"
+        src="/icons/link-deco.svg"
         width={12}
+        height={12}
       />
     </a>
   ) : (
@@ -103,23 +160,16 @@ const TxHashDisplayCell: FunctionComponent<
   );
 };
 
-const reasonToTranslationKey: Record<TransferFailureReason, string> = {
-  insufficientFee: "assets.historyTable.errors.insufficientFee",
-};
-
 const StatusDisplayCell: FunctionComponent<
-  BaseCell & {
-    status?: TransferStatus;
-    reason?: TransferFailureReason;
-  }
+  BaseCell & { status?: IBCTransferHistoryStatus | "failed"; reason?: string }
 > = ({ status, reason }) => {
-  const { t } = useTranslation();
+  const t = useTranslation();
   if (status == null) {
     // Uncommitted history has no status.
     // Show pending for uncommitted history..
     return (
       <div className="flex items-center gap-2">
-        <div className="h-6 w-6 animate-spin">
+        <div className="w-6 h-6 animate-spin">
           <Image
             alt="loading"
             src="/icons/loading-blue.svg"
@@ -133,7 +183,7 @@ const StatusDisplayCell: FunctionComponent<
   }
 
   switch (status) {
-    case "success":
+    case "complete":
       return (
         <div className="flex items-center gap-2">
           <Image
@@ -148,7 +198,7 @@ const StatusDisplayCell: FunctionComponent<
     case "pending":
       return (
         <div className="flex items-center gap-2">
-          <div className="h-6 w-6 animate-spin">
+          <div className="w-6 h-6 animate-spin">
             <Image
               alt="loading"
               src="/icons/loading-blue.svg"
@@ -166,30 +216,27 @@ const StatusDisplayCell: FunctionComponent<
           <span className="md:hidden">{t("assets.historyTable.refunded")}</span>
         </div>
       );
+    case "timeout":
+      return (
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 animate-spin">
+            <Image
+              alt="loading"
+              src="/icons/loading-blue.svg"
+              width={24}
+              height={24}
+            />
+          </div>
+          <span className="md:hidden">
+            {t("assets.historyTable.pendingRefunded")}
+          </span>
+        </div>
+      );
     case "failed":
       return (
         <div className="flex items-center gap-2">
           <Image alt="failed" src="/icons/error-x.svg" width={24} height={24} />
-          <span className="md:hidden">
-            {reason
-              ? t("assets.historyTable.failedWithReason", {
-                  reason: t(reasonToTranslationKey[reason]),
-                })
-              : t("assets.historyTable.failed")}
-          </span>
-        </div>
-      );
-    case "connection-error":
-      return (
-        <div className="flex items-center gap-2">
-          <Image alt="failed" src="/icons/error-x.svg" width={24} height={24} />
-          <span className="md:hidden">
-            {reason
-              ? t("assets.historyTable.failedWithReason", {
-                  reason: t(reasonToTranslationKey[reason]),
-                })
-              : t("assets.historyTable.connectionError")}
-          </span>
+          <span className="md:hidden">Failed{reason && `: ${reason}`}</span>
         </div>
       );
     default:

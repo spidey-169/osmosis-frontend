@@ -1,21 +1,15 @@
 import { FunctionComponent } from "react";
-
-import { DesktopOnlyPrivateText } from "~/components/privacy";
-import { AssetCell as Cell } from "~/components/table/cells/types";
+import { AssetCell as Cell } from "./types";
 
 export const BalanceCell: FunctionComponent<Partial<Cell>> = ({
   amount,
   fiatValue,
 }) =>
   amount ? (
-    <div className="right flex flex-col">
-      <span className="body1 text-white-high">
-        <DesktopOnlyPrivateText text={amount} />
-      </span>
+    <div className="flex flex-col right">
+      <span className="body1 text-white-high">{amount}</span>
       {fiatValue && (
-        <span className="body2 text-osmoverse-400">
-          <DesktopOnlyPrivateText text={fiatValue} />
-        </span>
+        <span className="body2 text-osmoverse-400">{fiatValue}</span>
       )}
     </div>
   ) : null;

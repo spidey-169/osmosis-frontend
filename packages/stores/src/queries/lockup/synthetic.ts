@@ -1,11 +1,10 @@
-import { KVStore } from "@keplr-wallet/common";
 import {
   ChainGetter,
   ObservableChainQuery,
   ObservableChainQueryMap,
-} from "@osmosis-labs/keplr-stores";
-
+} from "@keplr-wallet/stores";
 import { SyntheticLockupsByLockId } from "./types";
+import { KVStore } from "@keplr-wallet/common";
 
 export class ObservableSyntheticLockupsByLockIdInner extends ObservableChainQuery<SyntheticLockupsByLockId> {
   constructor(
@@ -32,10 +31,7 @@ export class ObservableSyntheticLockupsByLockIdInner extends ObservableChainQuer
       return undefined;
     }
 
-    return (
-      this.response.data.synthetic_locks.length > 0 &&
-      this.response.data.synthetic_locks[0].underlying_lock_id === this._lockId
-    );
+    return this.response.data.synthetic_locks.length > 0;
   }
 }
 

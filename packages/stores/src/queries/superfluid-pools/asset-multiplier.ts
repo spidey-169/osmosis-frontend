@@ -1,13 +1,12 @@
 import { KVStore } from "@keplr-wallet/common";
-import { Dec } from "@keplr-wallet/unit";
 import {
   ChainGetter,
   ObservableChainQuery,
   ObservableChainQueryMap,
-} from "@osmosis-labs/keplr-stores";
-import { computed, makeObservable } from "mobx";
-
+} from "@keplr-wallet/stores";
 import { SuperfluidAssetMultiplier } from "./types";
+import { computed, makeObservable } from "mobx";
+import { Dec } from "@keplr-wallet/unit";
 
 export class ObservableQuerySuperfluidAssetMultiplierInner extends ObservableChainQuery<SuperfluidAssetMultiplier> {
   constructor(

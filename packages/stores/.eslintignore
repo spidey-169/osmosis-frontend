@@ -4,4 +4,3 @@ types/*
 **/generated/**
 localnet
 README.md
-*.sh

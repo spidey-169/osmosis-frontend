@@ -1,10 +1,9 @@
-import classNames from "classnames";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { FunctionComponent } from "react";
-
-import { Icon } from "~/components/assets";
-import { TooltipProps } from "~/components/tooltip/types";
-import { CustomClasses } from "~/components/types";
+import classNames from "classnames";
+import { TooltipProps } from "./types";
+import { CustomClasses } from "../types";
 
 const Tippy = dynamic(() => import("@tippyjs/react"), { ssr: false });
 
@@ -12,21 +11,25 @@ export const InfoTooltip: FunctionComponent<
   TooltipProps &
     CustomClasses & {
       size?: { height: number; width: number };
+      iconSrcOverride?: string;
     }
-> = ({ content, trigger, size, className }) => (
+> = ({ content, trigger, size, iconSrcOverride, className }) => (
   <Tippy
-    className="body2 rounded-xl bg-osmoverse-800 p-2 drop-shadow-md md:p-1"
+    className="bg-osmoverse-900 border border-osmoverse-600 md:p-1 p-2 rounded-lg body2"
     content={content}
     trigger={trigger ?? "click"}
   >
     <div
-      className={classNames(
-        "flex cursor-pointer align-middle text-wosmongton-300",
-        className
-      )}
+      className={classNames("flex cursor-pointer align-middle", className)}
       onClick={(e) => e.stopPropagation()}
     >
-      <Icon id="info" height={16} width={16} {...size} />
+      <Image
+        alt="info"
+        src={iconSrcOverride ? iconSrcOverride : "/icons/info.svg"}
+        height={16}
+        width={16}
+        {...size}
+      />
     </div>
   </Tippy>
 );

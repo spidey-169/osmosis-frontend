@@ -1,24 +1,21 @@
-import { KVStore } from "@keplr-wallet/common";
-import { getKeyByValue } from "@osmosis-labs/utils";
-import WalletConnect from "@walletconnect/client";
 import {
-  action,
-  computed,
-  makeObservable,
   observable,
+  computed,
+  action,
   runInAction,
+  makeObservable,
 } from "mobx";
 import { computedFn } from "mobx-utils";
-import { isAddress, numberToHex, toHex } from "web3-utils";
-
-import { ChainNames, EthWallet } from "~/integrations/ethereum/types";
-import { WalletDisplay, WalletKey } from "~/integrations/wallets";
+import WalletConnect from "@walletconnect/client";
+import { toHex, isAddress, numberToHex } from "web3-utils";
+import { KVStore } from "@keplr-wallet/common";
+import { getKeyByValue } from "../../components/utils";
+import { WalletDisplay, WalletKey } from "../wallets";
+import { ChainNames, EthWallet } from "./types";
 
 const CONNECTED_ACCOUNT_KEY = "wc-eth-connected-account";
 const CONNECTED_ACCOUNT_CHAINID = "wc-eth-connected-chainId";
-/**
- * @deprecated
- */
+
 export class ObservableWalletConnect implements EthWallet {
   readonly key: WalletKey = "walletconnect";
   readonly mobileEnabled = false;
@@ -221,7 +218,7 @@ export class ObservableWalletConnect implements EthWallet {
   displayError(e: any): string | undefined {
     if (e.message === "User rejected the transaction") {
       // User denied
-      return "requestRejected";
+      return "Request rejected";
     }
   }
 

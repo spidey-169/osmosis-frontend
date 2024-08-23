@@ -1,10 +1,9 @@
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter, ObservableChainQuery } from "@osmosis-labs/keplr-stores";
+import { ChainGetter, ObservableChainQuery } from "@keplr-wallet/stores";
+import { Epochs } from "./types";
+import { computed, observable } from "mobx";
 import dayjs from "dayjs";
 import { Duration } from "dayjs/plugin/duration";
-import { computed, observable } from "mobx";
-
-import { Epochs } from "./types";
 
 export class ObservableQueryEpochsInner {
   constructor(
@@ -65,7 +64,6 @@ export class ObservableQueryEpochs extends ObservableChainQuery<Epochs> {
       this.map.set(identifier, inner);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return this.map.get(identifier)!;
   }
 }

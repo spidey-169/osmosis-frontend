@@ -1,12 +1,13 @@
 import { Dec, Int } from "@keplr-wallet/unit";
 
-import { PoolType } from "./types";
-
-/** Interface for base pool data and basic operations on that data. */
-export interface BasePool {
-  get type(): PoolType;
+/** Interface for pool data and basic operations on that data. */
+export interface Pool {
+  get type(): "weighted" | "stable";
 
   get id(): string;
+
+  get totalShare(): Int;
+  get shareDenom(): string;
 
   get swapFee(): Dec;
   get exitFee(): Dec;
@@ -15,7 +16,10 @@ export interface BasePool {
     denom: string;
     amount: Int;
   }[];
-
+  getPoolAsset(denom: string): {
+    denom: string;
+    amount: Int;
+  };
   hasPoolAsset(denom: string): boolean;
 
   getSpotPriceInOverOut(tokenInDenom: string, tokenOutDenom: string): Dec;
@@ -28,20 +32,42 @@ export interface BasePool {
     tokenInDenom: string,
     tokenOutDenom: string
   ): Dec;
-}
 
-/** Pool with user ownership represented as pro-rata shares. */
-export interface SharePool extends BasePool {
-  get totalShare(): Int;
-  get shareDenom(): string;
-
-  get poolAssets(): {
-    denom: string;
+  getTokenOutByTokenIn(
+    tokenIn: {
+      denom: string;
+      amount: Int;
+    },
+    tokenOutDenom: string,
+    swapFee?: Dec
+  ): {
     amount: Int;
-  }[];
-
-  getPoolAsset(denom: string): {
-    denom: string;
-    amount: Int;
+    beforeSpotPriceInOverOut: Dec;
+    beforeSpotPriceOutOverIn: Dec;
+    afterSpotPriceInOverOut: Dec;
+    afterSpotPriceOutOverIn: Dec;
+    effectivePriceInOverOut: Dec;
+    effectivePriceOutOverIn: Dec;
+    priceImpact: Dec;
   };
+  getTokenInByTokenOut(
+    tokenOut: {
+      denom: string;
+      amount: Int;
+    },
+    tokenInDenom: string,
+    swapFee?: Dec
+  ): {
+    amount: Int;
+    beforeSpotPriceInOverOut: Dec;
+    beforeSpotPriceOutOverIn: Dec;
+    afterSpotPriceInOverOut: Dec;
+    afterSpotPriceOutOverIn: Dec;
+    effectivePriceInOverOut: Dec;
+    effectivePriceOutOverIn: Dec;
+    priceImpact: Dec;
+  };
+
+  getNormalizedLiquidity(tokenInDenom: string, tokenOutDenom: string): Dec;
+  getLimitAmountByTokenIn(denom: string): Int;
 }

@@ -1,54 +1,35 @@
+import { ObservableQueryPools, ObservableQueryNumPools } from "./pools";
+import { ChainGetter, QueriesSetBase } from "@keplr-wallet/stores";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter, QueriesSetBase } from "@osmosis-labs/keplr-stores";
 import { DeepReadonly } from "utility-types";
-
+import { ObservableQueryGammPoolShare } from "./pool-share";
 import {
-  ObservableQueryPoolGetter,
-  ObservableQueryPools as ObservableQueryFilteredPools,
-} from "../queries-external/pools";
-import {
-  ObservableQueryAccountsPositions,
-  ObservableQueryAccountsUnbondingPositions,
-  ObservableQueryConcentratedLiquidityParams,
-  ObservableQueryLiquiditiesNetInDirection,
-  ObservableQueryLiquidityPositionsById,
-} from "./concentrated-liquidity";
+  ObservableQueryIncentivizedPools,
+  ObservableQueryLockableDurations,
+  ObservableQueryPoolsGaugeIds,
+} from "./pool-incentives";
 import { ObservableQueryEpochs } from "./epochs";
-import { ObservableQueryGauges } from "./incentives";
 import {
-  ObservableQueryAccountLocked,
   ObservableQueryAccountLockedCoins,
   ObservableQueryAccountUnlockingCoins,
+  ObservableQueryAccountLocked,
   ObservableSyntheticLockupsByLockId,
 } from "./lockup";
 import {
   ObservableQueryEpochProvisions,
   ObservableQueryMintParmas,
 } from "./mint";
+import { ObservableQueryDistrInfo } from "./pool-incentives/distr-info";
+import { ObservableQueryGuage } from "./incentives";
 import { ObservableQueryPoolCreationFee } from "./pool-creation-fee";
 import {
-  ObservableQueryIncentivizedPools,
-  ObservableQueryLockableDurations,
-  ObservableQueryPoolsGaugeIds,
-} from "./pool-incentives";
-import { ObservableQueryDistrInfo } from "./pool-incentives/distr-info";
-import { ObservableQueryPoolShare } from "./pool-share";
-import {
-  ObservableQueryCfmmConcentratedPoolLinks,
-  ObservableQueryNumPools,
-} from "./pools";
-import {
-  ObservableQueryAccountsSuperfluidDelegatedClPositions,
-  ObservableQueryAccountsSuperfluidUndelegatingClPositions,
-  ObservableQuerySuperfluidAssetMultiplier,
   ObservableQuerySuperfluidDelegations,
-  ObservableQuerySuperfluidOsmoEquivalent,
-  ObservableQuerySuperfluidParams,
   ObservableQuerySuperfluidPools,
   ObservableQuerySuperfluidUndelegations,
+  ObservableQuerySuperfluidAssetMultiplier,
+  ObservableQuerySuperfluidOsmoEquivalent,
+  ObservableQuerySuperfluidParams,
 } from "./superfluid-pools";
-import { ObservableQueryNodeInfo } from "./tendermint/node-info";
-import { ObservableQueryUsersValidatorPreferences } from "./valset-pref";
 
 export interface OsmosisQueries {
   osmosis?: OsmosisQueriesImpl;
@@ -56,11 +37,7 @@ export interface OsmosisQueries {
 
 export const OsmosisQueries = {
   use(
-    osmosisChainId: string,
-    webApiBaseUrl: string,
-    poolIdBlacklist: string[] = [],
-    transmuterCodeIds: string[] = [],
-    isTestnet = false
+    osmosisChainId: string
   ): (
     queriesSetBase: QueriesSetBase,
     kvStore: KVStore,
@@ -80,11 +57,7 @@ export const OsmosisQueries = {
                 queriesSetBase,
                 kvStore,
                 chainId,
-                chainGetter,
-                webApiBaseUrl,
-                poolIdBlacklist,
-                transmuterCodeIds,
-                isTestnet
+                chainGetter
               )
             : undefined,
       };
@@ -94,17 +67,9 @@ export const OsmosisQueries = {
 
 /** Root queries store for all Osmosis queries. */
 export class OsmosisQueriesImpl {
-  // concentrated liquidity
-  public readonly queryLiquiditiesInNetDirection: DeepReadonly<ObservableQueryLiquiditiesNetInDirection>;
-  public readonly queryLiquidityPositionsById: DeepReadonly<ObservableQueryLiquidityPositionsById>;
-  public readonly queryAccountsPositions: DeepReadonly<ObservableQueryAccountsPositions>;
-  public readonly queryAccountsUnbondingPositions: DeepReadonly<ObservableQueryAccountsUnbondingPositions>;
-  public readonly queryConcentratedLiquidityParams: DeepReadonly<ObservableQueryConcentratedLiquidityParams>;
-
-  public readonly queryPools: DeepReadonly<ObservableQueryPoolGetter>;
+  public readonly queryGammPools: DeepReadonly<ObservableQueryPools>;
   public readonly queryGammNumPools: DeepReadonly<ObservableQueryNumPools>;
-  public readonly queryCfmmConcentratedPoolLinks: DeepReadonly<ObservableQueryCfmmConcentratedPoolLinks>;
-  public readonly queryGammPoolShare: DeepReadonly<ObservableQueryPoolShare>;
+  public readonly queryGammPoolShare: DeepReadonly<ObservableQueryGammPoolShare>;
 
   public readonly queryLockedCoins: DeepReadonly<ObservableQueryAccountLockedCoins>;
   public readonly querySyntheticLockupsByLockId: DeepReadonly<ObservableSyntheticLockupsByLockId>;
@@ -119,7 +84,7 @@ export class OsmosisQueriesImpl {
   public readonly queryLockableDurations: DeepReadonly<ObservableQueryLockableDurations>;
   public readonly queryDistrInfo: DeepReadonly<ObservableQueryDistrInfo>;
   public readonly queryIncentivizedPools: DeepReadonly<ObservableQueryIncentivizedPools>;
-  public readonly queryGauge: DeepReadonly<ObservableQueryGauges>;
+  public readonly queryGauge: DeepReadonly<ObservableQueryGuage>;
   public readonly queryPoolsGaugeIds: DeepReadonly<ObservableQueryPoolsGaugeIds>;
 
   public readonly queryPoolCreationFee: DeepReadonly<ObservableQueryPoolCreationFee>;
@@ -130,29 +95,13 @@ export class OsmosisQueriesImpl {
   public readonly querySuperfluidParams: DeepReadonly<ObservableQuerySuperfluidParams>;
   public readonly querySuperfluidAssetMultiplier: DeepReadonly<ObservableQuerySuperfluidAssetMultiplier>;
   public readonly querySuperfluidOsmoEquivalent: DeepReadonly<ObservableQuerySuperfluidOsmoEquivalent>;
-  public readonly queryAccountsSuperfluidDelegatedPositions: DeepReadonly<ObservableQueryAccountsSuperfluidDelegatedClPositions>;
-  public readonly queryAccountsSuperfluidUndelegatingPositions: DeepReadonly<ObservableQueryAccountsSuperfluidUndelegatingClPositions>;
-
-  public readonly queryUsersValidatorPreferences: DeepReadonly<ObservableQueryUsersValidatorPreferences>;
-
-  public readonly queryNodeInfo: DeepReadonly<ObservableQueryNodeInfo>;
 
   constructor(
     queries: QueriesSetBase,
     kvStore: KVStore,
     chainId: string,
-    chainGetter: ChainGetter,
-    webApiBaseUrl: string,
-    poolIdBlacklist: string[] = [],
-    transmuterCodeIds: string[] = [],
-    isTestnet = false
+    chainGetter: ChainGetter
   ) {
-    this.queryNodeInfo = new ObservableQueryNodeInfo(
-      kvStore,
-      chainId,
-      chainGetter
-    );
-
     this.queryLockedCoins = new ObservableQueryAccountLockedCoins(
       kvStore,
       chainId,
@@ -179,67 +128,19 @@ export class OsmosisQueriesImpl {
       chainId,
       chainGetter
     );
-
-    this.queryLiquiditiesInNetDirection =
-      new ObservableQueryLiquiditiesNetInDirection(
-        kvStore,
-        chainId,
-        chainGetter
-      );
-
-    this.queryLiquidityPositionsById =
-      new ObservableQueryLiquidityPositionsById(kvStore, chainId, chainGetter);
-
-    this.queryAccountsPositions = new ObservableQueryAccountsPositions(
+    this.queryGammPools = new ObservableQueryPools(
       kvStore,
       chainId,
-      this.queryLiquidityPositionsById,
-      chainGetter
-    );
-
-    this.queryAccountsUnbondingPositions =
-      new ObservableQueryAccountsUnbondingPositions(
-        kvStore,
-        chainId,
-        chainGetter,
-        this.queryLiquidityPositionsById
-      );
-
-    this.queryConcentratedLiquidityParams =
-      new ObservableQueryConcentratedLiquidityParams(
-        kvStore,
-        chainId,
-        chainGetter
-      );
-
-    this.queryPools = new ObservableQueryFilteredPools(
-      kvStore,
-      chainId,
-      webApiBaseUrl,
       chainGetter,
-      this.queryLiquiditiesInNetDirection,
-      queries.queryBalances,
-      this.queryGammNumPools,
-      poolIdBlacklist,
-      transmuterCodeIds,
-      isTestnet
+      this.queryGammNumPools
     );
 
-    this.queryCfmmConcentratedPoolLinks =
-      new ObservableQueryCfmmConcentratedPoolLinks(
-        kvStore,
-        chainId,
-        chainGetter,
-        this.queryNodeInfo
-      );
-
-    this.queryGammPoolShare = new ObservableQueryPoolShare(
-      this.queryPools,
+    this.queryGammPoolShare = new ObservableQueryGammPoolShare(
+      this.queryGammPools,
       queries.queryBalances,
       this.queryAccountLocked,
       this.queryLockedCoins,
-      this.queryUnlockingCoins,
-      this.queryAccountsPositions
+      this.queryUnlockingCoins
     );
 
     this.queryMintParams = new ObservableQueryMintParmas(
@@ -266,14 +167,14 @@ export class OsmosisQueriesImpl {
       chainId,
       chainGetter
     );
-    this.queryGauge = new ObservableQueryGauges(kvStore, chainId, chainGetter);
+    this.queryGauge = new ObservableQueryGuage(kvStore, chainId, chainGetter);
     this.queryIncentivizedPools = new ObservableQueryIncentivizedPools(
       kvStore,
       chainId,
       chainGetter,
       this.queryLockableDurations,
       this.queryDistrInfo,
-      this.queryPools,
+      this.queryGammPools,
       this.queryMintParams,
       this.queryEpochProvisions,
       this.queryEpochs,
@@ -320,27 +221,7 @@ export class OsmosisQueriesImpl {
         chainGetter,
         this.querySuperfluidParams,
         this.querySuperfluidAssetMultiplier,
-        this.queryPools
-      );
-
-    this.queryAccountsSuperfluidDelegatedPositions =
-      new ObservableQueryAccountsSuperfluidDelegatedClPositions(
-        kvStore,
-        chainId,
-        chainGetter
-      );
-    this.queryAccountsSuperfluidUndelegatingPositions =
-      new ObservableQueryAccountsSuperfluidUndelegatingClPositions(
-        kvStore,
-        chainId,
-        chainGetter
-      );
-
-    this.queryUsersValidatorPreferences =
-      new ObservableQueryUsersValidatorPreferences(
-        kvStore,
-        chainId,
-        chainGetter
+        this.queryGammPools
       );
   }
 }

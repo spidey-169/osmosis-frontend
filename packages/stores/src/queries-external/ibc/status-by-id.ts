@@ -1,9 +1,8 @@
-import { KVStore } from "@keplr-wallet/common";
-import { HasMapStore } from "@osmosis-labs/keplr-stores";
 import { computed, makeObservable } from "mobx";
-import { computedFn } from "mobx-utils";
-
+import { HasMapStore } from "@keplr-wallet/stores";
 import { ObservableQueryExternalBase } from "../base";
+import { KVStore } from "@keplr-wallet/common";
+import { computedFn } from "mobx-utils";
 import { IbcStatus } from "./types";
 
 /** Queries for ibc chain data*/
@@ -38,14 +37,9 @@ class ObservableQueryIbcChainStatus extends ObservableQueryExternalBase<
 
   readonly getIbcStatus = computedFn(
     (channelId: string): IbcStatus | undefined => {
-      const channelData =
-        this.response &&
-        "data" in this.response &&
-        Array.isArray(this.response.data)
-          ? this.response.data.find(
-              (channel) => channel.channel_id === channelId
-            )
-          : undefined;
+      const channelData = this.response?.data.find(
+        (channel) => channel.channel_id === channelId
+      );
       if (channelData) {
         if (channelData.size_queue > 5) {
           if (channelData.duration_minutes > 20) return "congested";

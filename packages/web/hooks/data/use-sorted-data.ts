@@ -1,9 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
-
-import { SortDirection } from "~/components/types";
-import { DataSorter } from "~/hooks/data/data-sorter";
-import { DataProcessor } from "~/hooks/data/types";
-import { useUserProcessedData } from "~/hooks/data/use-user-processed-data";
+import { useMemo, useState } from "react";
+import { DataProcessor } from "./types";
+import { useUserProcessedData } from "./use-user-processed-data";
+import { DataSorter } from "./data-sorter";
+import { SortDirection } from "../../components/types";
 
 /**
  * Manages the use of user input to sort arbitrary data given a 'dot' key path (i.e. `"attributes.color"`).
@@ -34,23 +33,19 @@ export function useSortedData<TData>(
   const [sortDirection, setSortDirection] = useState<SortDirection>(
     initialSortDirection ?? "ascending"
   );
-  const toggleSortDirection = useCallback(
-    () =>
-      setSortDirection(
-        sortDirection === "ascending" ? "descending" : "ascending"
-      ),
-    [sortDirection]
-  );
+  const toggleSortDirection = () =>
+    setSortDirection(
+      sortDirection === "ascending" ? "descending" : "ascending"
+    );
   const [keypath, setKeypath, results] = useUserProcessedData(
     data,
     processor,
     initialKeyPath
   );
 
-  const directionalResults = useMemo(
-    () => (sortDirection === "descending" ? [...results].reverse() : results),
-    [sortDirection, results]
-  );
+  if (sortDirection === "descending") {
+    results.reverse();
+  }
 
   return [
     keypath,
@@ -58,6 +53,6 @@ export function useSortedData<TData>(
     sortDirection,
     setSortDirection,
     toggleSortDirection,
-    directionalResults,
+    results,
   ];
 }

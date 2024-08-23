@@ -1,31 +1,10 @@
 .prettierignore
 .gitignore
-.eslintignore
-
 /.next
-/e2e/keplr-extension
-coverage
 
 *.ico
 *.svg
 *.png
-*.jpg
-*.webp
-
-*.env
-*.local
-*.env.local
 
 yarn.lock
 .DS_Store
-
-.turbo
-*.log
-
-*.txt
-*.xml
-
-public/tradingview/**/*
-public/datafeeds/**/*
-
-*.zip

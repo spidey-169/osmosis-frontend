@@ -1,31 +1,24 @@
-import { KVStore } from "@keplr-wallet/common";
-import { getKeyByValue } from "@osmosis-labs/utils";
-import { EventEmitter } from "eventemitter3";
 import {
-  action,
-  computed,
+  runInAction,
   makeObservable,
   observable,
-  runInAction,
+  action,
+  computed,
 } from "mobx";
 import { computedFn } from "mobx-utils";
-import { isAddress, toHex } from "web3-utils";
-
-import { Alert } from "~/components/alert";
-import { t } from "~/hooks";
-import {
-  switchToChain,
-  withEthInWindow,
-} from "~/integrations/ethereum/metamask-utils";
-import { pollTransactionReceipt } from "~/integrations/ethereum/queries";
-import { ChainNames, EthWallet } from "~/integrations/ethereum/types";
-import { WalletDisplay, WalletKey } from "~/integrations/wallets";
+import { toHex, isAddress } from "web3-utils";
+import { KVStore } from "@keplr-wallet/common";
+import { EventEmitter } from "eventemitter3";
+import { Alert } from "../../components/alert";
+import { getKeyByValue } from "../../components/utils";
+import { WalletDisplay, WalletKey } from "../wallets";
+import { ChainNames, EthWallet } from "./types";
+import { switchToChain, withEthInWindow } from "./metamask-utils";
+import { pollTransactionReceipt } from "./queries";
 
 const CONNECTED_ACCOUNT_KEY = "metamask-connected-account";
 const IS_TESTNET = process.env.NEXT_PUBLIC_IS_TESTNET === "true";
-/**
- * @deprecated
- */
+
 export class ObservableMetamask implements EthWallet {
   readonly key: WalletKey = "metamask";
   readonly mobileEnabled = false;
@@ -40,7 +33,7 @@ export class ObservableMetamask implements EthWallet {
 
   /** Eth format: `0x...` */
   @observable
-  protected _chainId: string | null = null;
+  protected _chainId: string | undefined;
 
   @observable
   protected _isSending: string | null = null;
@@ -58,51 +51,46 @@ export class ObservableMetamask implements EthWallet {
   constructor(protected readonly kvStore?: KVStore) {
     makeObservable(this);
 
-    if (
-      typeof document !== "undefined" &&
-      /complete|interactive|loaded/.test(document.readyState)
-    ) {
-      withEthInWindow((eth) => {
-        const handleAccountChanged = ([account]: (string | undefined)[]) => {
+    withEthInWindow((eth) => {
+      const handleAccountChanged = ([account]: (string | undefined)[]) => {
+        // switching to a few certain networks in metamask causes an undefined address to come in.
+        // this causes the proxy to appear disconnected.
+        // this can't be differentiated from the disconnect event, and the user must reconnect.
+
+        this.accountAddress = account;
+
+        if (!account) {
+          runInAction(() => {
+            this._chainId = undefined;
+          });
+        }
+      };
+
+      eth.on("accountsChanged", handleAccountChanged);
+      eth.on("chainChanged", (chainId: string) => {
+        runInAction(() => {
+          this._chainId = chainId;
+
           // switching to a few certain networks in metamask causes an undefined address to come in.
           // this causes the proxy to appear disconnected.
           // this can't be differentiated from the disconnect event, and the user must reconnect.
-
-          this.accountAddress = account;
-
-          if (!account) {
-            runInAction(() => {
-              this._chainId = null;
-            });
+          if (this.accountAddress === undefined) {
+            // received chainChanged from metamask, so we know the user connected prior
+            this.enable();
           }
-        };
-
-        eth.on("accountsChanged", handleAccountChanged);
-        eth.on("chainChanged", (chainId: string) => {
-          runInAction(() => {
-            this._chainId = chainId;
-
-            // switching to a few certain networks in metamask causes an undefined address to come in.
-            // this causes the proxy to appear disconnected.
-            // this can't be differentiated from the disconnect event, and the user must reconnect.
-            if (this.accountAddress === undefined) {
-              // received chainChanged from metamask, so we know the user connected prior
-              this.enable();
-            }
-          });
         });
-        eth.on("disconnect", () => handleAccountChanged([undefined]));
-
-        // set from cache
-        kvStore
-          ?.get<string | null>(CONNECTED_ACCOUNT_KEY)
-          .then((existingAccount) => {
-            if (existingAccount) {
-              this.enable();
-            }
-          });
       });
-    }
+      eth.on("disconnect", () => handleAccountChanged([undefined]));
+
+      // set from cache
+      kvStore
+        ?.get<string | null>(CONNECTED_ACCOUNT_KEY)
+        .then((existingAccount) => {
+          if (existingAccount) {
+            this.enable();
+          }
+        });
+    });
   }
 
   get accountAddress(): string | undefined {
@@ -113,7 +101,7 @@ export class ObservableMetamask implements EthWallet {
     runInAction(() => {
       this._accountAddress = address;
       if (this.accountAddress === undefined) {
-        this._chainId = null;
+        this._chainId = undefined;
       }
     });
     this.kvStore?.set(CONNECTED_ACCOUNT_KEY, address || null);
@@ -149,17 +137,12 @@ export class ObservableMetamask implements EthWallet {
 
     if (ethChainId) {
       this._preferredChainId = ethChainId;
-    } else {
-      console.warn("Invalid chain name:", chainName, "is not in ChainNames");
     }
   }
 
   enable(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       withEthInWindow((ethereum) => {
-        if (this.isSending) {
-          return reject(`MetaMask: request in progress: ${this.isSending}`);
-        }
         return ethereum
           .request({ method: "eth_requestAccounts" })
           .then((accounts) => {
@@ -172,17 +155,17 @@ export class ObservableMetamask implements EthWallet {
             });
           })
           .catch(reject);
-      });
+      }, Promise.reject("MetaMask: failed to connect: no ethereum in window"));
     });
   }
 
   @action
   disable() {
     this.accountAddress = undefined;
-    this._chainId = null;
+    this._chainId = undefined;
   }
 
-  readonly send = computedFn(({ method, params: ethTx }) => {
+  send = computedFn(({ method, params: ethTx }) => {
     if (!this.isConnected) {
       return Promise.reject(
         "MetaMask: can't send request, account not connected"
@@ -219,32 +202,26 @@ export class ObservableMetamask implements EthWallet {
         }
 
         runInAction(() => (this._isSending = method));
-        let resp: unknown;
-        try {
-          resp = await ethereum.request({
-            method,
-            params: Array.isArray(ethTx)
-              ? ethTx
-              : [
-                  {
-                    from: this.accountAddress,
-                    ...ethTx,
-                    value: ethTx.value ? toHex(ethTx.value) : undefined,
-                  },
-                ],
-          });
-          if (method === "eth_sendTransaction") {
-            const txHash = resp as string;
-            this.txStatusEventEmitter.emit("pending", txHash);
-            pollTransactionReceipt(this.send, txHash, (status) =>
-              this.txStatusEventEmitter.emit(status, txHash)
-            );
-          }
-        } catch (e: any) {
-          throw e;
-        } finally {
-          runInAction(() => (this._isSending = null));
+        const resp = await ethereum.request({
+          method,
+          params: Array.isArray(ethTx)
+            ? ethTx
+            : [
+                {
+                  from: this.accountAddress,
+                  ...ethTx,
+                  value: ethTx.value ? toHex(ethTx.value) : undefined,
+                },
+              ],
+        });
+        if (method === "eth_sendTransaction") {
+          this.txStatusEventEmitter.emit("pending");
+          const txHash = resp as string;
+          pollTransactionReceipt(this.send, txHash, (status) =>
+            this.txStatusEventEmitter.emit(status, txHash)
+          );
         }
+        runInAction(() => (this._isSending = null));
         return resp;
       }) ||
       Promise.reject("MetaMask: failed to send message: ethereum not in window")
@@ -255,26 +232,19 @@ export class ObservableMetamask implements EthWallet {
     if (e.code === 4001) {
       // User denied
       return {
-        titleTranslationKey: "transactionFailed",
-        captionTranslationKey: "requestRejected",
+        message: "Transaction Failed",
+        caption: "Request rejected",
       };
     } else if (e.code === 4100) {
       // wallet is not logged in (but is connected)
       return {
-        titleTranslationKey: "Action Unavailable",
-        captionTranslationKey: "Please log into MetaMask",
-      };
-    } else if (e.code === -32002) {
-      // request is there already
-      return {
-        titleTranslationKey: t("assets.transfer.errors.seeRequest", {
-          walletName: this.displayInfo.displayName,
-        }),
+        message: "Action Unavailable",
+        caption: `Please log into MetaMask`,
       };
     }
   }
 
-  readonly makeExplorerUrl = (txHash: string) =>
+  makeExplorerUrl = (txHash: string) =>
     IS_TESTNET
       ? `https://goerli.etherscan.io/tx/${txHash}`
       : `https://etherscan.io/tx/${txHash}`;

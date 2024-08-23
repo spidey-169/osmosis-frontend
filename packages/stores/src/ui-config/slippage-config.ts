@@ -1,12 +1,9 @@
 import { Dec, DecUtils, RatePretty } from "@keplr-wallet/unit";
 import { action, computed, makeObservable, observable } from "mobx";
-
 import { InvalidSlippageError, NegativeSlippageError } from "./errors";
 
 export class ObservableSlippageConfig {
   static readonly defaultSelectableSlippages: ReadonlyArray<Dec> = [
-    // 0.5%
-    new Dec("0.005"),
     // 1%
     new Dec("0.01"),
     // 3%
@@ -14,9 +11,6 @@ export class ObservableSlippageConfig {
     // 5%
     new Dec("0.05"),
   ];
-
-  @observable
-  protected _defaultManualSlippage: string = "0.5";
 
   @observable.shallow
   protected _selectableSlippages: ReadonlyArray<Dec> =
@@ -26,10 +20,10 @@ export class ObservableSlippageConfig {
   protected _selectedIndex: number = 0;
 
   @observable
-  protected _isManualSlippage: boolean = true;
+  protected _isManualSlippage: boolean = false;
 
   @observable
-  protected _manualSlippage: string = "0.5";
+  protected _manualSlippage: string = "2.5";
 
   constructor() {
     makeObservable(this);
@@ -69,15 +63,9 @@ export class ObservableSlippageConfig {
 
   @action
   setManualSlippage(str: string) {
-    if (isNaN(Number(str))) return;
-
     if (str.startsWith(".")) {
       str = "0" + str;
     }
-
-    // within bound
-    const strDec = new Dec(str);
-    if (strDec.gte(new Dec(100)) || strDec.lt(new Dec(0))) return;
 
     this._isManualSlippage = true;
     this._manualSlippage = str;
@@ -86,11 +74,6 @@ export class ObservableSlippageConfig {
   @computed
   get manualSlippageStr(): string {
     return this._manualSlippage;
-  }
-
-  @computed
-  get defaultManualSlippage(): string {
-    return this._defaultManualSlippage;
   }
 
   @computed
@@ -154,23 +137,5 @@ export class ObservableSlippageConfig {
     }
 
     return;
-  }
-
-  @action
-  setDefaultSlippage(value: string) {
-    this._defaultManualSlippage = value;
-  }
-
-  @action
-  getSmallestSlippage(value: Dec): [number, Dec] {
-    let index = this._selectableSlippages.findIndex((slippage) =>
-      slippage.gte(value)
-    );
-
-    if (index === -1) {
-      index = this._selectableSlippages.length - 1;
-    }
-
-    return [index, this._selectableSlippages[index]];
   }
 }

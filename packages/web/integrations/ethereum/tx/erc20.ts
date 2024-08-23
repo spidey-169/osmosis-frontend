@@ -1,7 +1,6 @@
 import { isAddress, toHex } from "web3-utils";
-
-import { SendFn } from "~/integrations/ethereum//types";
-import { Erc20Abi } from "~/integrations/ethereum/queries";
+import { Erc20Abi } from "../queries";
+import { SendFn } from "../types";
 
 /**
  * ERC20 Transfer
@@ -18,44 +17,26 @@ export async function transfer(
   fromAddress: string,
   toAddress: string
 ): Promise<unknown> {
-  const params = erc20TransferParams(
-    fromAddress,
-    toAddress,
-    amount,
-    erc20Address
-  );
-
-  if (params) {
+  if (
+    isAddress(fromAddress) &&
+    isAddress(erc20Address) &&
+    isAddress(toAddress)
+  ) {
     return sendFn({
       method: "eth_sendTransaction",
-      params,
+      params: [
+        {
+          from: fromAddress,
+          to: erc20Address,
+          data: Erc20Abi.encodeFunctionData("transfer", [
+            toAddress,
+            toHex(amount),
+          ]),
+        },
+        "latest",
+      ],
     });
   }
 
-  throw new Error("Invalid params");
-}
-
-export function erc20TransferParams(
-  fromAddress: string,
-  toAddress: string,
-  amount: string,
-  erc20Address: string
-): unknown[] | undefined {
-  if (
-    isAddress(fromAddress) &&
-    isAddress(toAddress) &&
-    isAddress(erc20Address)
-  ) {
-    return [
-      {
-        from: fromAddress,
-        to: erc20Address,
-        data: Erc20Abi.encodeFunctionData("transfer", [
-          toAddress,
-          toHex(amount),
-        ]),
-      },
-      "latest",
-    ];
-  }
+  return Promise.reject("Invalid address");
 }

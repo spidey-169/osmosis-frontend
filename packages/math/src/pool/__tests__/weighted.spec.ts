@@ -1,8 +1,7 @@
-import { Dec } from "@keplr-wallet/unit";
 import assert from "assert";
-
-import { pow } from "../../utils";
 import { WeightedPoolMath } from "../weighted";
+import { pow } from "../../utils";
+import { Dec } from "@keplr-wallet/unit";
 
 const powPrecision = new Dec("0.00000001");
 

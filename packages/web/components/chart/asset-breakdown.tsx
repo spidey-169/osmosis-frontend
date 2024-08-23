@@ -1,9 +1,6 @@
-import { CoinPretty, Dec, Int, IntPretty } from "@keplr-wallet/unit";
-import { truncate } from "@osmosis-labs/utils";
-import classNames from "classnames";
 import { FunctionComponent } from "react";
-
-import { Breakpoint, useWindowSize } from "~/hooks";
+import classNames from "classnames";
+import { CoinPretty, Dec, IntPretty } from "@keplr-wallet/unit";
 
 const ColorCycle = [
   "bg-ion-500",
@@ -20,8 +17,6 @@ export const AssetBreakdownChart: FunctionComponent<{
   totalWeight: IntPretty;
   colorCycle?: typeof ColorCycle;
 }> = ({ assets, totalWeight, colorCycle = ColorCycle }) => {
-  const { isMobile, width } = useWindowSize();
-
   const assetPercentages = assets.map(({ weight }) =>
     weight.quo(totalWeight).mul(new Dec(100))
   );
@@ -32,7 +27,7 @@ export const AssetBreakdownChart: FunctionComponent<{
   return (
     <div
       className={classNames(
-        "grid w-full md:!grid-cols-2 md:rounded-2xl md:bg-osmoverse-900 md:p-6"
+        "grid w-full md:!grid-cols-2 md:p-6 md:rounded-2xl md:bg-osmoverse-900"
       )}
       style={{
         gridTemplateColumns: gridTemplateColumns.join(" "),
@@ -47,30 +42,22 @@ export const AssetBreakdownChart: FunctionComponent<{
             <div className="md:flex md:items-center md:gap-1">
               <div
                 className={classNames(
-                  "hidden h-4 w-4 rounded-full md:block",
+                  "hidden md:block h-4 w-4 rounded-full",
                   colorCycle[index % colorCycle.length]
                 )}
               />
-              <span
-                className="subtitle1 md:body2 text-osmoverse-400"
-                title={amount.currency.coinDenom}
-              >
-                {truncate(amount.currency.coinDenom, isMobile ? 6 : 12)}:{" "}
+              <span className="subtitle1 md:body2 text-osmoverse-400">
+                {amount.currency.coinDenom}:{" "}
                 {assetPercentages[index].toString()}%
               </span>
             </div>
-            <h6 className="md:subtitle2 text-osmoverse-100">
-              {amount.toDec().round().gt(new Int(0))
-                ? amount.maxDecimals(0).hideDenom(true).toString()
-                : amount
-                    .maxDecimals(width < Breakpoint.lg && !isMobile ? 4 : 8)
-                    .hideDenom(true)
-                    .toString()}
-            </h6>
+            <h5 className="md:subtitle2 text-osmoverse-100">
+              {amount.maxDecimals(0).hideDenom(true).toString()}
+            </h5>
           </div>
           <div
             className={classNames(
-              "flex h-2 w-full md:hidden",
+              "md:hidden flex w-full h-3",
               colorCycle[index % colorCycle.length],
               {
                 "rounded-l-full": index === 0,
