@@ -17,7 +17,7 @@ mkdir -p $OUTPUT_DIR/static
 # Hier ein Beispiel für eine allgemeine Verschiebung
 
 # Verschiebe Inhalte aus den verschiedenen Verzeichnissen
-mv packages/web/.next/* $OUTPUT_DIR/
+#mv packages/web/.next/* $OUTPUT_DIR/
 
 cp -R packages/web/.next/static $OUTPUT_DIR/static
 cp packages/web/.next/server/pages/* $OUTPUT_DIR/
