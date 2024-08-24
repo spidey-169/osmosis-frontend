@@ -23,7 +23,7 @@ mkdir -p $OUTPUT_DIR/_next/
 
 cp -R packages/web/.next/static $OUTPUT_DIR/_next/
 cp -R packages/web/.next/server/pages/* $OUTPUT_DIR/
-
+cp -R packages/web/public/* $OUTPUT_DIR/_next/
 
 
 
