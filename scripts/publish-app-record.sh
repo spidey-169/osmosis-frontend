@@ -6,7 +6,7 @@ AR_RECORD_FILE=tmp.rf.$$
 ADR_RECORD_FILE=tmp.rf.$$
 CONFIG_FILE=`mktemp`
 
-CERC_APP_TYPE=${CERC_APP_TYPE:-"webapp"}
+CERC_APP_TYPE=${CERC_APP_TYPE:-"nextjs"}
 CERC_REPO_REF=${CERC_REPO_REF:-${GITHUB_SHA:-`git log -1 --format="%H"`}}
 CERC_IS_LATEST_RELEASE=${CERC_IS_LATEST_RELEASE:-"true"}
 
