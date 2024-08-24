@@ -10,6 +10,8 @@ lerna run build
 # Erstelle das Output-Verzeichnis, falls es nicht existiert
 mkdir -p $OUTPUT_DIR
 mkdir -p $OUTPUT_DIR/static
+mkdir -p $OUTPUT_DIR/_next/
+
 #mkdir -p $OUTPUT_DIR/packages
 
 # Verschiebe alle Build-Artefakte in das Output-Verzeichnis
@@ -19,8 +21,13 @@ mkdir -p $OUTPUT_DIR/static
 # Verschiebe Inhalte aus den verschiedenen Verzeichnissen
 #mv packages/web/.next/* $OUTPUT_DIR/
 
-cp -R packages/web/.next/static $OUTPUT_DIR/static
-cp packages/web/.next/server/pages/* $OUTPUT_DIR/
+cp -R packages/web/.next/static $OUTPUT_DIR/_next/
+cp -R packages/web/.next/server/pages/* $OUTPUT_DIR/
+
+
+
+
+
 #mv lerna.json $OUTPUT_DIR/
 #mv package.json $OUTPUT_DIR/
 
