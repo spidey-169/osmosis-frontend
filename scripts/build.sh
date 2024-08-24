@@ -16,7 +16,7 @@ mkdir -p $OUTPUT_DIR
 # Hier ein Beispiel für eine allgemeine Verschiebung
 
 # Verschiebe Inhalte aus den verschiedenen Verzeichnissen
-mv packages/web/* $OUTPUT_DIR
+mv packages/web/* $OUTPUT_DIR/
 #mv lerna.json $OUTPUT_DIR/
 #mv package.json $OUTPUT_DIR/
 
