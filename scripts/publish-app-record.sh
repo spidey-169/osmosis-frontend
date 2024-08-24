@@ -95,7 +95,7 @@ record:
   config:
     env:
       CERC_WEBAPP_DEBUG: "$rcd_app_version"
-      CERC_BUILD_OUTPUT_DIR: "."
+      CER_BUILD_TOOL: "yarn"
   meta:
     note: "Added by CI @ `date`"
     repository: "`git remote get-url origin`"
